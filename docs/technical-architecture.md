@@ -1,120 +1,97 @@
 # Technical Architecture
 
 ## Stack choice
-Option B: real mobile app using Expo React Native for worker experience and Next.js for admin dashboard.
+
+Expo React Native for the employee app, Next.js for the owner/admin dashboard, and Supabase for auth + Postgres + RLS.
 
 ## Why this stack
-- Expo accelerates iOS/Android delivery and location permissions handling
-- Supabase covers auth, Postgres, RLS, and realtime with minimal backend overhead
-- Next.js gives a quick admin dashboard shell and future deploy flexibility
-- Shared TypeScript package reduces drift across mobile/web/backend
+
+- Expo is the fastest route to employee mobile shift UX and device permission handling
+- Supabase gives auth, SQL, RLS, and realtime-friendly primitives with low backend overhead
+- Next.js is enough for an owner operations dashboard without overbuilding
+- Shared TypeScript constants reduce drift across apps
 
 ## High-level components
-- Mobile app (`apps/mobile`)
-  - Worker shift UX
-  - Permission + consent UX
-  - Background/foreground location service abstraction
-- Web app (`apps/web`)
-  - Admin dashboard scaffold
-  - Event feed and active workers overview
-- Shared package (`packages/shared`)
-  - Domain types, constants, validation helpers
-- Supabase backend
-  - Auth users
-  - Tables: profiles, sites, shifts, location_pings, geofence_events, consent_records
-  - RLS policies
-  - Edge function or SQL-trigger path for geofence event processing
 
-## Data model
+### Mobile app (`apps/mobile`)
+- employee sign-in
+- employee shift console
+- consent capture before shift activation
+- location service abstraction (real background sync still pending)
+
+### Web app (`apps/web`)
+- owner/admin sign-in
+- operations dashboard for active shifts, sites, and recent geofence events
+
+### Shared package (`packages/shared`)
+- domain types
+- Supabase project constants
+- environment helpers
+
+### Supabase backend
+- Auth users
+- `profiles`, `sites`, `consent_records`, `shifts`, `location_pings`, `geofence_events`
+- RLS policies for employee-vs-admin separation
+- RPCs for `start_shift` and `end_my_active_shift`
+- auth trigger to auto-bootstrap profiles
+
+## Role split
+
+### Employee
+- authenticates in mobile app
+- can read own profile / shifts / consent / pings
+- can only create shift-scoped tracking data for self
+- cannot use owner/admin dashboard
+
+### Owner/admin
+- authenticates in web app
+- can read org operational data
+- can manage sites in SQL/RLS model
+- cannot use employee mobile shift tracking flow
+
+## Data model notes
 
 ### profiles
-- id (uuid, auth user id)
-- full_name
-- role (`worker` | `admin`)
-- is_active
-- created_at
-
-### sites
-- id
-- name
-- latitude
-- longitude
-- radius_meters
-- is_active
-- created_at
+- mirrors `auth.users`
+- role is the app access switch (`worker` or `admin`)
 
 ### consent_records
-- id
-- user_id
-- consent_version
-- consented_at
-- device_platform
-- permission_scope
+- versioned consent trail
+- used as a prerequisite for starting a shift
 
 ### shifts
-- id
-- user_id
-- site_id nullable
-- status (`scheduled` | `active` | `ended` | `cancelled`)
-- started_at
-- ended_at
-- tracking_mode (`foreground` | `background`)
-- started_latitude / started_longitude
-- ended_latitude / ended_longitude
+- active shift is the permission boundary for tracking
+- partial unique index prevents multiple active shifts per employee
 
 ### location_pings
-- id
-- shift_id
-- user_id
-- latitude
-- longitude
-- accuracy_meters
-- speed_mps nullable
-- captured_at
-- source (`foreground` | `background` | `manual`)
+- only insertable when the authenticated user owns the active shift
 
 ### geofence_events
-- id
-- shift_id
-- user_id
-- site_id
-- event_type (`enter` | `exit` | `dwell`)
-- event_at
-- derived_from_ping_id
-- metadata jsonb
+- currently generated with nearest-site placeholder logic after ping insert
+- good enough for MVP plumbing, not final geofence quality
 
-## Location tracking architecture
-- Tracking only activates when shift status becomes `active`
-- Mobile service requests permission just-in-time at shift start
-- Client batches location updates at configurable interval
-- Each ping includes `shift_id` and timestamp
-- Backend rejects pings without an active shift
-- Ending a shift tears down tracking task on device
+## Tracking lifecycle
 
-## Geofence event model
-- Sites represented by center point + radius
-- Event generation path:
-  1. New ping arrives
-  2. Compare ping to assigned/all allowed sites
-  3. Determine inside/outside transition from prior ping
-  4. Insert `enter` / `exit`
-  5. Optional `dwell` after configurable threshold
-- MVP can process in SQL/Edge Function hybrid; scale path can move to queue workers later
+1. employee signs in on mobile
+2. employee sees disclosure and starts shift
+3. app records consent row
+4. app calls `start_shift(...)`
+5. only then should GPS collection/sync run
+6. employee ends shift
+7. app calls `end_my_active_shift()`
+8. GPS collection must stop immediately
 
-## Security and compliance
-- RLS on every user-linked table
-- Workers can read their own profile, shifts, consent, and pings
-- Admins can read org-level operational data
-- Service role used only in trusted backend contexts
-- No permanent location collection outside active shifts
-- Consent copy stored versioned in `consent_records`
+## Security and compliance stance
 
-## Deployment path
-- Mobile via Expo/EAS
-- Web via Vercel
-- Supabase hosted project
+- RLS enabled on every operational table
+- no covert or off-shift tracking path should exist
+- owner/admin view is intentionally separated from employee app
+- service role remains for trusted backend tasks only
+- live secrets stay in local env files, not committed repo files
 
-## Known MVP tradeoffs
-- Battery optimization not fully tuned yet
-- Geofence logic starts simple before advanced map matching
-- Dashboard is scaffold-level, not enterprise analytics
+## Known MVP gaps
+
+- no production-grade server-side web session enforcement yet
+- no actual background Expo task + ping uploader yet
+- geofence calculations are intentionally simplistic
+- no seed automation or migration tooling yet
