@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "FieldOps Consent",
+    "slug": "fieldops-consent",
+    "scheme": "fieldopsconsent",
+    "plugins": ["expo-router", "expo-location"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-me"
+      }
+    }
+  }
+}
