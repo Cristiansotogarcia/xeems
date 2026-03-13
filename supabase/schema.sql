@@ -16,12 +16,29 @@ create table if not exists public.profiles (
 create table if not exists public.sites (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  client_name text,
+  address_line_1 text,
+  address_line_2 text,
+  city text,
+  region text,
+  postal_code text,
+  country_code text not null default 'AW',
+  timezone text not null default 'America/Aruba',
   latitude double precision not null,
   longitude double precision not null,
   radius_meters integer not null check (radius_meters > 0),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+alter table public.sites add column if not exists client_name text;
+alter table public.sites add column if not exists address_line_1 text;
+alter table public.sites add column if not exists address_line_2 text;
+alter table public.sites add column if not exists city text;
+alter table public.sites add column if not exists region text;
+alter table public.sites add column if not exists postal_code text;
+alter table public.sites add column if not exists country_code text not null default 'AW';
+alter table public.sites add column if not exists timezone text not null default 'America/Aruba';
 
 create table if not exists public.consent_records (
   id uuid primary key default gen_random_uuid(),
@@ -32,6 +49,9 @@ create table if not exists public.consent_records (
   permission_scope text not null,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists consent_records_unique_scope_per_day_idx
+  on public.consent_records (user_id, consent_version, permission_scope, ((consented_at at time zone 'utc')::date));
 
 create table if not exists public.shifts (
   id uuid primary key default gen_random_uuid(),
@@ -231,6 +251,10 @@ create policy "admins can read operations data" on public.sites
 drop policy if exists "admins can manage sites" on public.sites;
 create policy "admins can manage sites" on public.sites
   for all using (public.is_admin(auth.uid())) with check (public.is_admin(auth.uid()));
+
+drop policy if exists "workers can read sites for shift selection" on public.sites;
+create policy "workers can read sites for shift selection" on public.sites
+  for select using (is_active = true and not public.is_admin(auth.uid()));
 
 drop policy if exists "admins can read all shifts" on public.shifts;
 create policy "admins can read all shifts" on public.shifts

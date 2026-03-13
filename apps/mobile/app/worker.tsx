@@ -2,26 +2,30 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView, Text, Pressable, View } from 'react-native';
 import type { ConsentRecord, Profile, Shift, Site } from '@fieldops/shared';
-import { requestShiftTrackingConsent, startShiftTracking, stopShiftTracking } from '../lib/location';
+import { getTrackingDiagnostics, requestShiftTrackingConsent, startShiftTracking, stopShiftTracking } from '../lib/location';
 import { supabase } from '../lib/supabase';
 
 interface WorkerState {
   loading: boolean;
   status: string;
+  trackingModeLabel: string;
   profile: Profile | null;
   activeShift: Shift | null;
   sites: Site[];
   consents: ConsentRecord[];
+  selectedSiteId: string | null;
 }
 
 export default function WorkerScreen() {
   const [state, setState] = useState<WorkerState>({
     loading: true,
     status: 'Loading employee workspace...',
+    trackingModeLabel: 'Not started',
     profile: null,
     activeShift: null,
     sites: [],
-    consents: []
+    consents: [],
+    selectedSiteId: null
   });
 
   async function loadWorkerSnapshot() {
@@ -34,7 +38,14 @@ export default function WorkerScreen() {
         return;
       }
 
-      const [{ data: profile, error: profileError }, { data: activeShift, error: shiftError }, { data: sites, error: sitesError }, { data: consents, error: consentError }] = await Promise.all([
+      const diagnostics = await getTrackingDiagnostics();
+
+      const [
+        { data: profile, error: profileError },
+        { data: activeShift, error: shiftError },
+        { data: sites, error: sitesError },
+        { data: consents, error: consentError }
+      ] = await Promise.all([
         supabase.from('profiles').select('id, full_name, role, is_active').eq('id', userId).single(),
         supabase
           .from('shifts')
@@ -44,8 +55,17 @@ export default function WorkerScreen() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
-        supabase.from('sites').select('id, name, latitude, longitude, radius_meters').eq('is_active', true).order('name'),
-        supabase.from('consent_records').select('id, user_id, consent_version, consented_at, permission_scope').eq('user_id', userId).order('consented_at', { ascending: false }).limit(3)
+        supabase
+          .from('sites')
+          .select('id, name, client_name, latitude, longitude, radius_meters, address_line_1, address_line_2, city, region, postal_code, country_code, timezone')
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('consent_records')
+          .select('id, user_id, consent_version, consented_at, permission_scope')
+          .eq('user_id', userId)
+          .order('consented_at', { ascending: false })
+          .limit(3)
       ]);
 
       if (profileError || shiftError || sitesError || consentError) {
@@ -58,9 +78,28 @@ export default function WorkerScreen() {
         return;
       }
 
+      const mappedSites = (sites ?? []).map((site) => ({
+        id: site.id,
+        name: site.name,
+        clientName: site.client_name,
+        latitude: site.latitude,
+        longitude: site.longitude,
+        radiusMeters: site.radius_meters,
+        address: {
+          line1: site.address_line_1,
+          line2: site.address_line_2,
+          city: site.city,
+          region: site.region,
+          postalCode: site.postal_code,
+          countryCode: site.country_code,
+          timezone: site.timezone
+        }
+      }));
+
       setState({
         loading: false,
-        status: activeShift ? 'Shift is active. Tracking may run until you end it.' : 'No active shift. GPS collection is off.',
+        status: activeShift ? 'Shift is active. Tracking is allowed until you end it.' : 'No active shift. GPS collection is off.',
+        trackingModeLabel: diagnostics.taskRegistered ? 'Background task registered' : diagnostics.taskDefined ? 'Task available, waiting to register' : 'Task unavailable',
         profile: profile
           ? {
               id: profile.id,
@@ -80,20 +119,15 @@ export default function WorkerScreen() {
               trackingMode: activeShift.tracking_mode
             }
           : null,
-        sites: (sites ?? []).map((site) => ({
-          id: site.id,
-          name: site.name,
-          latitude: site.latitude,
-          longitude: site.longitude,
-          radiusMeters: site.radius_meters
-        })),
+        sites: mappedSites,
         consents: (consents ?? []).map((consent) => ({
           id: consent.id,
           userId: consent.user_id,
           consentVersion: consent.consent_version,
           consentedAt: consent.consented_at,
           permissionScope: consent.permission_scope
-        }))
+        })),
+        selectedSiteId: activeShift?.site_id ?? mappedSites[0]?.id ?? null
       });
     } catch (error) {
       setState((current: WorkerState) => ({
@@ -110,15 +144,16 @@ export default function WorkerScreen() {
 
   async function handleStartShift() {
     try {
-      setState((current: WorkerState) => ({ ...current, status: 'Recording consent and starting shift...' }));
+      setState((current: WorkerState) => ({ ...current, status: 'Recording consent, requesting device permissions, and starting shift...' }));
       await requestShiftTrackingConsent();
-      await startShiftTracking({
+      const trackingStatus = await startShiftTracking({
         id: state.activeShift?.id ?? 'new',
         userId: state.profile?.id ?? '',
-        siteId: state.sites[0]?.id ?? null,
+        siteId: state.selectedSiteId,
         status: 'active',
         trackingMode: 'background'
       });
+      setState((current) => ({ ...current, status: trackingStatus.lastSyncLabel, trackingModeLabel: trackingStatus.mode }));
       await loadWorkerSnapshot();
     } catch (error) {
       setState((current: WorkerState) => ({ ...current, status: error instanceof Error ? error.message : 'Unable to start shift.' }));
@@ -128,7 +163,8 @@ export default function WorkerScreen() {
   async function handleEndShift() {
     try {
       setState((current: WorkerState) => ({ ...current, status: 'Ending shift and disabling tracking...' }));
-      await stopShiftTracking();
+      const trackingStatus = await stopShiftTracking();
+      setState((current) => ({ ...current, status: trackingStatus.lastSyncLabel, trackingModeLabel: trackingStatus.mode }));
       await loadWorkerSnapshot();
     } catch (error) {
       setState((current: WorkerState) => ({ ...current, status: error instanceof Error ? error.message : 'Unable to end shift.' }));
@@ -143,29 +179,48 @@ export default function WorkerScreen() {
         <Text style={{ color: '#e5e7eb' }}>Role: {state.profile?.role ?? 'worker'}</Text>
         <Text style={{ color: '#e5e7eb' }}>Shift status: {state.activeShift?.status ?? 'inactive'}</Text>
         <Text style={{ color: '#e5e7eb' }}>Tracking status: {state.status}</Text>
+        <Text style={{ color: '#e5e7eb' }}>Device tracking mode: {state.trackingModeLabel}</Text>
         <Text style={{ color: '#93c5fd' }}>
-          Tracking is only allowed after consent and only while your shift is active.
+          Tracking is only allowed after consent and only while your shift is active. Aruba sites default to America/Aruba where no site timezone is set.
         </Text>
       </View>
+      <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 10 }}>
+        <Text style={{ color: 'white', fontWeight: '700' }}>Shift site</Text>
+        {state.sites.length === 0 ? (
+          <Text style={{ color: '#d1d5db' }}>No active sites loaded yet.</Text>
+        ) : (
+          state.sites.map((site) => {
+            const isSelected = state.selectedSiteId === site.id;
+            return (
+              <Pressable
+                key={site.id}
+                onPress={() => setState((current) => ({ ...current, selectedSiteId: site.id }))}
+                style={{
+                  borderWidth: 1,
+                  borderColor: isSelected ? '#38bdf8' : '#334155',
+                  borderRadius: 12,
+                  padding: 12,
+                  backgroundColor: isSelected ? '#082f49' : '#0f172a'
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '700' }}>{site.name}</Text>
+                <Text style={{ color: '#cbd5e1' }}>{site.clientName ?? 'Unassigned client'}</Text>
+                <Text style={{ color: '#94a3b8' }}>
+                  {site.address?.line1 ?? 'Address missing'} {site.address?.city ? `, ${site.address.city}` : ''}
+                </Text>
+                <Text style={{ color: '#94a3b8' }}>{site.radiusMeters}m geofence</Text>
+              </Pressable>
+            );
+          })
+        )}
+      </View>
       <View style={{ gap: 12 }}>
-        <Pressable onPress={handleStartShift} disabled={state.loading || !!state.activeShift} style={{ backgroundColor: '#0ea5e9', padding: 16, borderRadius: 12, opacity: state.loading || !!state.activeShift ? 0.6 : 1 }}>
+        <Pressable onPress={handleStartShift} disabled={state.loading || !!state.activeShift || !state.selectedSiteId} style={{ backgroundColor: '#0ea5e9', padding: 16, borderRadius: 12, opacity: state.loading || !!state.activeShift || !state.selectedSiteId ? 0.6 : 1 }}>
           <Text style={{ color: '#082f49', fontWeight: '700', textAlign: 'center' }}>Start shift and enable tracking</Text>
         </Pressable>
         <Pressable onPress={handleEndShift} disabled={state.loading || !state.activeShift} style={{ backgroundColor: '#fca5a5', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift ? 0.6 : 1 }}>
           <Text style={{ color: '#7f1d1d', fontWeight: '700', textAlign: 'center' }}>End shift and stop tracking</Text>
         </Pressable>
-      </View>
-      <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 8 }}>
-        <Text style={{ color: 'white', fontWeight: '700' }}>Available sites</Text>
-        {state.sites.length === 0 ? (
-          <Text style={{ color: '#d1d5db' }}>No active sites loaded yet.</Text>
-        ) : (
-          state.sites.map((site) => (
-            <Text key={site.id} style={{ color: '#d1d5db' }}>
-              {site.name} — {site.radiusMeters}m geofence
-            </Text>
-          ))
-        )}
       </View>
       <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 8 }}>
         <Text style={{ color: 'white', fontWeight: '700' }}>Recent consent records</Text>

@@ -11,12 +11,24 @@ export interface Profile {
   createdAt?: string;
 }
 
+export interface SiteAddress {
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  region?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
+  timezone?: string | null;
+}
+
 export interface Site {
   id: string;
   name: string;
+  clientName?: string | null;
   latitude: number;
   longitude: number;
   radiusMeters: number;
+  address?: SiteAddress;
   isActive?: boolean;
   createdAt?: string;
 }
@@ -86,6 +98,7 @@ export const CONSENT_VERSION = 'v1';
 export const DEFAULT_LOCATION_BATCH_SECONDS = 60;
 export const DEFAULT_GEOFENCE_DWELL_SECONDS = 120;
 export const DEFAULT_SHIFT_AUTO_STOP_HOURS = 16;
+export const DEFAULT_SITE_TIMEZONE = 'America/Aruba';
 
 export function isAdminRole(role?: UserRole | null): role is 'admin' {
   return role === 'admin';
@@ -101,4 +114,14 @@ export function getRequiredEnv(key: string, value?: string | null) {
 
 export function getSupabaseUrlFromProjectId(projectId = SUPABASE_PROJECT_ID) {
   return `https://${projectId}.supabase.co`;
+}
+
+export function formatSiteAddress(address?: SiteAddress) {
+  if (!address) {
+    return '';
+  }
+
+  return [address.line1, address.line2, address.city, address.region, address.postalCode, address.countryCode]
+    .filter(Boolean)
+    .join(', ');
 }

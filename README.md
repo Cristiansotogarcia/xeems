@@ -4,13 +4,11 @@ Consent-based workforce location tracking MVP for active-shift attendance, live 
 
 ## What changed in this pass
 
-- Wired both apps to the real Supabase project URL for **GPS Monitoring** (`gfvxqomihlolxhfigebk`)
-- Split auth flows more clearly:
-  - **mobile app = employees only**
-  - **web dashboard = owners/admins only**
-- Replaced demo-only auth placeholders with Supabase email/password sign-in
-- Added shift start/end RPC usage so tracking scope is enforced by the database
-- Expanded the schema with auto-profile bootstrap, one-active-shift protection, and stronger RLS guidance
+- Added Expo Task Manager + Expo Location architecture for active-shift-only tracking on the employee app
+- Added immediate ping sync plus background registration fallback messaging
+- Expanded sites into a client/site location model with address + timezone fields
+- Added owner dashboard marker scaffolding for named client locations
+- Added Aruba-friendly seed SQL and clearer local testing guidance
 
 ## Principles
 
@@ -44,13 +42,16 @@ Consent-based workforce location tracking MVP for active-shift attendance, live 
    - web: `apps/web/.env.example` → `apps/web/.env.local`
    - mobile: `apps/mobile/.env.example` → `apps/mobile/.env`
 3. In Supabase, copy the **anon key** and **service role key** from Project Settings → API
-4. Apply `supabase/schema.sql` in the Supabase SQL editor
-5. Create at least:
+4. Apply `supabase/schema.sql`
+5. Apply `supabase/seed.sql`
+6. Create at least:
    - one owner/admin user
    - one employee user
-   - one active site row
-6. Run `pnpm install`
-7. Run `pnpm dev`
+7. Promote the owner/admin account in SQL:
+   - `update public.profiles set role = 'admin' where id = '<OWNER_USER_UUID>';`
+8. Run `pnpm install`
+9. Run `pnpm dev`
+10. Use a dev build / preview build for mobile background-location testing. Expo Go is not sufficient for reliable background validation.
 
 ## Auth and role model
 
@@ -75,15 +76,18 @@ Working directionally:
 - mobile employee sign-in via Supabase
 - mobile role gate that rejects owner/admin login on employee app
 - consent insert + start/end shift RPC flow
+- Expo background task registration attempt for active-shift-only tracking
+- immediate location ping sync when shift tracking starts
 - web owner/admin sign-in via Supabase
 - web dashboard loading active shifts, recent geofence events, and sites from Supabase
+- owner dashboard marker scaffold for named client/site locations
 - database policies closer to real role separation
 
 Still incomplete:
-- true background GPS sync implementation and device permission UX
-- map visualizations
-- seed/bootstrap automation for users and sites
-- production route protection/middleware on the web app
-- end-to-end validation against a fully configured live Supabase project
+- production-hard offline retry strategy for location sync
+- true map provider integration (current dashboard map is a lightweight coordinate scaffold)
+- site CRUD forms and richer owner workflows
+- stronger production route protection/middleware on the web app
+- end-to-end validation against a fully configured live Supabase project on real devices
 
-See `docs/implementation-plan.md` for the setup checklist.
+See `docs/implementation-plan.md` for the setup checklist and MVP limitations.

@@ -7,6 +7,17 @@
     "experiments": {
       "typedRoutes": true
     },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FieldOps uses your location only while you are on an active shift and after you explicitly consent.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "FieldOps can continue collecting location in the background only while your shift is active, so owners can see field attendance.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"]
+    },
     "extra": {
       "eas": {
         "projectId": "replace-me"
