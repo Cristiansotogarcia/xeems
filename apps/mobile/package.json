@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "expo start",
     "build": "expo export",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@fieldops/shared": "workspace:*",
@@ -18,7 +20,8 @@
     "expo-task-manager": "^12.0.1",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-web": "~0.19.10"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

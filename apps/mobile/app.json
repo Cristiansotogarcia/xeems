@@ -1,14 +1,15 @@
 {
   "expo": {
     "name": "FieldOps Consent",
-    "slug": "fieldops-consent",
+    "slug": "fieldops-gps",
     "scheme": "fieldopsconsent",
-    "plugins": ["expo-router", "expo-location"],
+    "plugins": [],
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.fieldops.gps",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "FieldOps uses your location only while you are on an active shift and after you explicitly consent.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "FieldOps can continue collecting location in the background only while your shift is active, so owners can see field attendance.",
@@ -16,11 +17,12 @@
       }
     },
     "android": {
+      "package": "com.fieldops.gps",
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"]
     },
     "extra": {
       "eas": {
-        "projectId": "replace-me"
+        "projectId": "51fae249-73a6-414f-8fa8-18a04d03df53"
       }
     }
   }
