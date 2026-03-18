@@ -2,13 +2,29 @@ export type UserRole = 'worker' | 'admin';
 export type ShiftStatus = 'scheduled' | 'active' | 'ended' | 'cancelled';
 export type TrackingMode = 'foreground' | 'background';
 export type GeofenceEventType = 'enter' | 'exit' | 'dwell';
+export type ShiftBreakType = 'lunch' | 'pause';
 
 export interface Profile {
   id: string;
+  email?: string | null;
   fullName: string;
   role: UserRole;
   isActive: boolean;
   createdAt?: string;
+}
+
+export interface DesktopDevice {
+  id: string;
+  userId: string;
+  deviceUuid: string;
+  deviceName?: string | null;
+  osUsername?: string | null;
+  appVersion?: string | null;
+  enrollmentStatus: 'pending' | 'enrolled' | 'disabled';
+  monitoringEnabled: boolean;
+  lastSeenAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SiteAddress {
@@ -41,6 +57,16 @@ export interface Shift {
   startedAt?: string | null;
   endedAt?: string | null;
   trackingMode?: TrackingMode | null;
+}
+
+export interface ShiftBreak {
+  id: string;
+  shiftId: string;
+  userId: string;
+  breakType: ShiftBreakType;
+  startedAt: string;
+  endedAt?: string | null;
+  createdAt?: string;
 }
 
 export interface LocationPing {
@@ -83,6 +109,7 @@ export interface AdminDashboardSnapshot {
   activeShifts: Array<Shift & { profile?: Pick<Profile, 'fullName'> | null; site?: Pick<Site, 'name'> | null }>;
   sites: Site[];
   recentEvents: Array<GeofenceEvent & { site?: Pick<Site, 'name'> | null; profile?: Pick<Profile, 'fullName'> | null }>;
+  desktopDevices?: DesktopDevice[];
 }
 
 export interface SupabasePublicEnv {

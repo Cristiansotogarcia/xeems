@@ -1,6 +1,7 @@
 node_modules
 .pnpm-store
 .next
+.turbo
 .expo
 .expo-shared
 dist
@@ -9,3 +10,13 @@ coverage
 .env.*
 !.env.example
 .DS_Store
+.vscode
+.claude
+supabase/.temp
+
+# FieldOps mobile-only branch
+apps/desktop
+apps/web
+docs
+scripts/link-web-react.cjs
+supabase

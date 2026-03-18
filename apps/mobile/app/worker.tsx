@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView, Text, Pressable, View } from 'react-native';
-import type { ConsentRecord, Profile, Shift, Site } from '@fieldops/shared';
-import { getTrackingDiagnostics, requestShiftTrackingConsent, startShiftTracking, stopShiftTracking } from '../lib/location';
+import type { Profile, Shift, ShiftBreak, Site } from '@fieldops/shared';
+import { endShiftBreak, getTrackingDiagnostics, prepareShiftTrackingPermissions, startShiftBreak, startShiftTracking, stopShiftTracking } from '../lib/location';
 import { supabase } from '../lib/supabase';
 
 interface WorkerState {
@@ -11,8 +11,8 @@ interface WorkerState {
   trackingModeLabel: string;
   profile: Profile | null;
   activeShift: Shift | null;
+  activeBreak: ShiftBreak | null;
   sites: Site[];
-  consents: ConsentRecord[];
   selectedSiteId: string | null;
 }
 
@@ -23,8 +23,8 @@ export default function WorkerScreen() {
     trackingModeLabel: 'Not started',
     profile: null,
     activeShift: null,
+    activeBreak: null,
     sites: [],
-    consents: [],
     selectedSiteId: null
   });
 
@@ -43,8 +43,8 @@ export default function WorkerScreen() {
       const [
         { data: profile, error: profileError },
         { data: activeShift, error: shiftError },
-        { data: sites, error: sitesError },
-        { data: consents, error: consentError }
+        { data: activeBreak, error: breakError },
+        { data: sites, error: sitesError }
       ] = await Promise.all([
         supabase.from('profiles').select('id, full_name, role, is_active').eq('id', userId).single(),
         supabase
@@ -52,24 +52,26 @@ export default function WorkerScreen() {
           .select('id, user_id, site_id, status, started_at, ended_at, tracking_mode')
           .eq('user_id', userId)
           .eq('status', 'active')
-          .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        supabase
+          .from('shift_breaks')
+          .select('id, shift_id, user_id, break_type, started_at, ended_at')
+          .eq('user_id', userId)
+          .is('ended_at', null)
+          .order('started_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase
           .from('sites')
           .select('id, name, client_name, latitude, longitude, radius_meters, address_line_1, address_line_2, city, region, postal_code, country_code, timezone')
           .eq('is_active', true)
-          .order('name'),
-        supabase
-          .from('consent_records')
-          .select('id, user_id, consent_version, consented_at, permission_scope')
-          .eq('user_id', userId)
-          .order('consented_at', { ascending: false })
-          .limit(3)
+          .order('name')
       ]);
 
-      if (profileError || shiftError || sitesError || consentError) {
-        throw profileError ?? shiftError ?? sitesError ?? consentError;
+      if (profileError || shiftError || breakError || sitesError) {
+        throw profileError ?? shiftError ?? breakError ?? sitesError;
       }
 
       if (profile?.role === 'admin') {
@@ -98,7 +100,11 @@ export default function WorkerScreen() {
 
       setState({
         loading: false,
-        status: activeShift ? 'Shift is active. Tracking is allowed until you end it.' : 'No active shift. GPS collection is off.',
+        status: activeBreak
+          ? `${activeBreak.break_type === 'lunch' ? 'Lunch break' : 'Pause'} is active. GPS collection is paused until you end the break.`
+          : activeShift
+            ? 'Shift is active. Tracking is allowed until you end it.'
+            : 'No active shift. GPS collection is off.',
         trackingModeLabel: diagnostics.taskRegistered ? 'Background task registered' : diagnostics.taskDefined ? 'Task available, waiting to register' : 'Task unavailable',
         profile: profile
           ? {
@@ -119,20 +125,24 @@ export default function WorkerScreen() {
               trackingMode: activeShift.tracking_mode
             }
           : null,
+        activeBreak: activeBreak
+          ? {
+              id: activeBreak.id,
+              shiftId: activeBreak.shift_id,
+              userId: activeBreak.user_id,
+              breakType: activeBreak.break_type,
+              startedAt: activeBreak.started_at,
+              endedAt: activeBreak.ended_at
+            }
+          : null,
         sites: mappedSites,
-        consents: (consents ?? []).map((consent) => ({
-          id: consent.id,
-          userId: consent.user_id,
-          consentVersion: consent.consent_version,
-          consentedAt: consent.consented_at,
-          permissionScope: consent.permission_scope
-        })),
         selectedSiteId: activeShift?.site_id ?? mappedSites[0]?.id ?? null
       });
     } catch (error) {
       setState((current: WorkerState) => ({
         ...current,
         loading: false,
+        activeBreak: current.activeBreak,
         status: error instanceof Error ? error.message : 'Unable to load worker data.'
       }));
     }
@@ -144,8 +154,8 @@ export default function WorkerScreen() {
 
   async function handleStartShift() {
     try {
-      setState((current: WorkerState) => ({ ...current, status: 'Recording consent, requesting device permissions, and starting shift...' }));
-      await requestShiftTrackingConsent();
+      setState((current: WorkerState) => ({ ...current, status: 'Requesting device permissions and starting shift tracking...' }));
+      await prepareShiftTrackingPermissions();
       const trackingStatus = await startShiftTracking({
         id: state.activeShift?.id ?? 'new',
         userId: state.profile?.id ?? '',
@@ -171,6 +181,31 @@ export default function WorkerScreen() {
     }
   }
 
+  async function handleStartBreak(breakType: 'lunch' | 'pause') {
+    try {
+      setState((current: WorkerState) => ({
+        ...current,
+        status: `Starting ${breakType === 'lunch' ? 'lunch break' : 'pause'} and pausing GPS tracking...`
+      }));
+      const trackingStatus = await startShiftBreak(breakType);
+      setState((current) => ({ ...current, status: trackingStatus.lastSyncLabel, trackingModeLabel: trackingStatus.mode }));
+      await loadWorkerSnapshot();
+    } catch (error) {
+      setState((current: WorkerState) => ({ ...current, status: error instanceof Error ? error.message : 'Unable to start break.' }));
+    }
+  }
+
+  async function handleEndBreak() {
+    try {
+      setState((current: WorkerState) => ({ ...current, status: 'Ending break and resuming GPS tracking...' }));
+      const trackingStatus = await endShiftBreak();
+      setState((current) => ({ ...current, status: trackingStatus.lastSyncLabel, trackingModeLabel: trackingStatus.mode }));
+      await loadWorkerSnapshot();
+    } catch (error) {
+      setState((current: WorkerState) => ({ ...current, status: error instanceof Error ? error.message : 'Unable to end break.' }));
+    }
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a', padding: 20, gap: 18 }}>
       <Text style={{ color: 'white', fontSize: 24, fontWeight: '700' }}>Employee shift console</Text>
@@ -178,10 +213,13 @@ export default function WorkerScreen() {
         <Text style={{ color: '#e5e7eb' }}>Signed in as: {state.profile?.fullName ?? 'Unknown employee'}</Text>
         <Text style={{ color: '#e5e7eb' }}>Role: {state.profile?.role ?? 'worker'}</Text>
         <Text style={{ color: '#e5e7eb' }}>Shift status: {state.activeShift?.status ?? 'inactive'}</Text>
+        <Text style={{ color: '#e5e7eb' }}>
+          Break status: {state.activeBreak ? `${state.activeBreak.breakType} since ${new Date(state.activeBreak.startedAt).toLocaleTimeString()}` : 'none'}
+        </Text>
         <Text style={{ color: '#e5e7eb' }}>Tracking status: {state.status}</Text>
         <Text style={{ color: '#e5e7eb' }}>Device tracking mode: {state.trackingModeLabel}</Text>
         <Text style={{ color: '#93c5fd' }}>
-          Tracking is only allowed after consent and only while your shift is active. Aruba sites default to America/Aruba where no site timezone is set.
+          This company phone uses XEEMS under written notification. GPS collection still stays limited to active shifts. Aruba sites default to America/Aruba where no site timezone is set.
         </Text>
       </View>
       <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 10 }}>
@@ -216,23 +254,40 @@ export default function WorkerScreen() {
       </View>
       <View style={{ gap: 12 }}>
         <Pressable onPress={handleStartShift} disabled={state.loading || !!state.activeShift || !state.selectedSiteId} style={{ backgroundColor: '#0ea5e9', padding: 16, borderRadius: 12, opacity: state.loading || !!state.activeShift || !state.selectedSiteId ? 0.6 : 1 }}>
-          <Text style={{ color: '#082f49', fontWeight: '700', textAlign: 'center' }}>Start shift and enable tracking</Text>
+          <Text style={{ color: '#082f49', fontWeight: '700', textAlign: 'center' }}>Start shift tracking</Text>
         </Pressable>
-        <Pressable onPress={handleEndShift} disabled={state.loading || !state.activeShift} style={{ backgroundColor: '#fca5a5', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift ? 0.6 : 1 }}>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Pressable
+            onPress={() => handleStartBreak('lunch')}
+            disabled={state.loading || !state.activeShift || !!state.activeBreak}
+            style={{ flex: 1, backgroundColor: '#fde68a', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
+          >
+            <Text style={{ color: '#78350f', fontWeight: '700', textAlign: 'center' }}>Start lunch break</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleStartBreak('pause')}
+            disabled={state.loading || !state.activeShift || !!state.activeBreak}
+            style={{ flex: 1, backgroundColor: '#fdba74', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
+          >
+            <Text style={{ color: '#7c2d12', fontWeight: '700', textAlign: 'center' }}>Start pause</Text>
+          </Pressable>
+        </View>
+        <Pressable
+          onPress={handleEndBreak}
+          disabled={state.loading || !state.activeBreak}
+          style={{ backgroundColor: '#86efac', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeBreak ? 0.6 : 1 }}
+        >
+          <Text style={{ color: '#14532d', fontWeight: '700', textAlign: 'center' }}>End current break</Text>
+        </Pressable>
+        <Pressable onPress={handleEndShift} disabled={state.loading || !state.activeShift || !!state.activeBreak} style={{ backgroundColor: '#fca5a5', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}>
           <Text style={{ color: '#7f1d1d', fontWeight: '700', textAlign: 'center' }}>End shift and stop tracking</Text>
         </Pressable>
       </View>
       <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 8 }}>
-        <Text style={{ color: 'white', fontWeight: '700' }}>Recent consent records</Text>
-        {state.consents.length === 0 ? (
-          <Text style={{ color: '#d1d5db' }}>No consent record stored yet for this account.</Text>
-        ) : (
-          state.consents.map((consent) => (
-            <Text key={consent.id} style={{ color: '#d1d5db' }}>
-              {consent.consentedAt} — {consent.permissionScope}
-            </Text>
-          ))
-        )}
+        <Text style={{ color: 'white', fontWeight: '700' }}>XEEMS notice</Text>
+        <Text style={{ color: '#d1d5db' }}>
+          Your employer provides written XEEMS notification for company-issued devices. In-app consent capture is not required for this deployment.
+        </Text>
       </View>
     </SafeAreaView>
   );
