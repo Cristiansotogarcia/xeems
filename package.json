@@ -1,12 +1,13 @@
 {
-  "name": "workforce-gps-consent-mvp",
+  "name": "xeems",
   "private": true,
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "typecheck": "turbo typecheck"
+    "typecheck": "turbo typecheck",
+    "postinstall": "node scripts/link-web-react.cjs"
   },
   "devDependencies": {
     "turbo": "^2.0.14",

@@ -1,6 +1,7 @@
 node_modules
 .pnpm-store
 .next
+.turbo
 .expo
 .expo-shared
 dist
@@ -9,3 +10,12 @@ coverage
 .env.*
 !.env.example
 .DS_Store
+.vscode
+.claude
+supabase/.temp
+
+# Desktop app
+apps/desktop/release
+apps/desktop/dist/main
+apps/desktop/dist/renderer
+apps/desktop/*.tgz

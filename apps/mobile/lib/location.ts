@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  CONSENT_VERSION,
   DEFAULT_LOCATION_BATCH_SECONDS,
   DEFAULT_SITE_TIMEZONE,
-  type Shift
+  type Shift,
+  type ShiftBreakType
 } from '@fieldops/shared';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
@@ -12,10 +12,18 @@ import { supabase } from './supabase';
 
 const LOCATION_TASK_NAME = 'fieldops-active-shift-location';
 const ACTIVE_SHIFT_STORAGE_KEY = 'fieldops.activeShift';
+const ACTIVE_BREAK_STORAGE_KEY = 'fieldops.activeBreak';
 
 interface StoredShiftContext {
   shiftId: string;
   userId: string;
+}
+
+interface StoredBreakContext {
+  breakId: string;
+  shiftId: string;
+  breakType: ShiftBreakType;
+  startedAt: string;
 }
 
 export interface TrackingStatus {
@@ -29,6 +37,7 @@ export interface TrackingDiagnostics {
   taskRegistered: boolean;
   platform: string;
   activeShiftId: string | null;
+  activeBreakType?: ShiftBreakType | null;
 }
 
 async function readStoredShiftContext(): Promise<StoredShiftContext | null> {
@@ -52,6 +61,27 @@ async function writeStoredShiftContext(context: StoredShiftContext | null) {
   await AsyncStorage.setItem(ACTIVE_SHIFT_STORAGE_KEY, JSON.stringify(context));
 }
 
+async function readStoredBreakContext(): Promise<StoredBreakContext | null> {
+  const raw = await AsyncStorage.getItem(ACTIVE_BREAK_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as StoredBreakContext;
+  } catch {
+    await AsyncStorage.removeItem(ACTIVE_BREAK_STORAGE_KEY);
+    return null;
+  }
+}
+
+async function writeStoredBreakContext(context: StoredBreakContext | null) {
+  if (!context) {
+    await AsyncStorage.removeItem(ACTIVE_BREAK_STORAGE_KEY);
+    return;
+  }
+
+  await AsyncStorage.setItem(ACTIVE_BREAK_STORAGE_KEY, JSON.stringify(context));
+}
+
 async function insertLocationPing(context: StoredShiftContext, location: Location.LocationObject, source: 'foreground' | 'background' | 'manual') {
   const { error } = await supabase.from('location_pings').insert({
     shift_id: context.shiftId,
@@ -69,6 +99,12 @@ async function insertLocationPing(context: StoredShiftContext, location: Locatio
   }
 }
 
+async function stopBackgroundUpdatesIfRunning() {
+  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)) {
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+  }
+}
+
 if (!TaskManager.isTaskDefined(LOCATION_TASK_NAME)) {
   TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     if (error) {
@@ -79,6 +115,11 @@ if (!TaskManager.isTaskDefined(LOCATION_TASK_NAME)) {
     try {
       const context = await readStoredShiftContext();
       if (!context) {
+        return;
+      }
+
+      const activeBreak = await readStoredBreakContext();
+      if (activeBreak?.shiftId === context.shiftId) {
         return;
       }
 
@@ -139,6 +180,11 @@ async function syncImmediateLocationPing(source: 'foreground' | 'manual' = 'fore
     return;
   }
 
+  const activeBreak = await readStoredBreakContext();
+  if (activeBreak?.shiftId === context.shiftId) {
+    return;
+  }
+
   const location = await Location.getCurrentPositionAsync({
     accuracy: Location.Accuracy.Balanced
   });
@@ -157,34 +203,14 @@ async function startExpoBackgroundUpdates() {
     activityType: Location.ActivityType.Other,
     foregroundService: {
       notificationTitle: 'Shift tracking active',
-      notificationBody: 'FieldOps is collecting location only while your shift is active.',
+      notificationBody: 'XEEMS is collecting location only while your shift is active on this company-issued phone.',
       notificationColor: '#0ea5e9'
     }
   });
 }
 
-export async function requestShiftTrackingConsent() {
-  const session = await supabase.auth.getSession();
-  const userId = session.data.session?.user.id;
-
-  if (!userId) {
-    throw new Error('Sign in before requesting tracking consent.');
-  }
-
-  const permissions = await requestLocationPermissions();
-
-  const { error } = await supabase.from('consent_records').insert({
-    user_id: userId,
-    consent_version: CONSENT_VERSION,
-    permission_scope: 'foreground_and_background_active_shift_only',
-    device_platform: `expo-${Platform.OS}`
-  });
-
-  if (error && !error.message.toLowerCase().includes('duplicate')) {
-    throw error;
-  }
-
-  return permissions;
+export async function prepareShiftTrackingPermissions() {
+  return requestLocationPermissions();
 }
 
 export async function startShiftTracking(shift: Shift): Promise<TrackingStatus> {
@@ -199,6 +225,7 @@ export async function startShiftTracking(shift: Shift): Promise<TrackingStatus> 
 
   const context = await fetchActiveShiftContext();
   await writeStoredShiftContext(context);
+  await writeStoredBreakContext(null);
 
   try {
     await startExpoBackgroundUpdates();
@@ -207,7 +234,7 @@ export async function startShiftTracking(shift: Shift): Promise<TrackingStatus> 
     return {
       enabled: true,
       mode: 'background',
-      lastSyncLabel: `Shift started. Background tracking is registered for the active shift only (${DEFAULT_SITE_TIMEZONE} default site timezone context).`
+      lastSyncLabel: `Shift started. Background tracking is registered for the active shift on this company device (${DEFAULT_SITE_TIMEZONE} default site timezone context).`
     };
   } catch (trackingError) {
     await syncImmediateLocationPing('manual');
@@ -224,11 +251,9 @@ export async function startShiftTracking(shift: Shift): Promise<TrackingStatus> 
 }
 
 export async function stopShiftTracking(): Promise<TrackingStatus> {
-  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)) {
-    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-  }
-
+  await stopBackgroundUpdatesIfRunning();
   await writeStoredShiftContext(null);
+  await writeStoredBreakContext(null);
 
   const { error } = await supabase.rpc('end_my_active_shift');
 
@@ -243,20 +268,92 @@ export async function stopShiftTracking(): Promise<TrackingStatus> {
   };
 }
 
+export async function startShiftBreak(breakType: ShiftBreakType): Promise<TrackingStatus> {
+  const { data, error } = await supabase.rpc('start_my_shift_break', {
+    p_break_type: breakType
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const context = await readStoredShiftContext();
+  if (!context) {
+    throw new Error('No active shift is stored on this device.');
+  }
+
+  await writeStoredBreakContext({
+    breakId: String(data.id),
+    shiftId: context.shiftId,
+    breakType,
+    startedAt: String(data.started_at)
+  });
+  await stopBackgroundUpdatesIfRunning();
+
+  return {
+    enabled: false,
+    mode: 'stopped',
+    lastSyncLabel: `${breakType === 'lunch' ? 'Lunch break' : 'Pause'} started. GPS collection is paused until the break ends.`
+  };
+}
+
+export async function endShiftBreak(): Promise<TrackingStatus> {
+  const { data, error } = await supabase.rpc('end_my_active_break');
+
+  if (error) {
+    throw error;
+  }
+
+  await writeStoredBreakContext(null);
+
+  const context = await readStoredShiftContext();
+  if (!context) {
+    return {
+      enabled: false,
+      mode: 'stopped',
+      lastSyncLabel: 'Break ended, but no active shift is stored on this device.'
+    };
+  }
+
+  try {
+    await startExpoBackgroundUpdates();
+    await syncImmediateLocationPing('foreground');
+
+    return {
+      enabled: true,
+      mode: 'background',
+      lastSyncLabel: `${String(data.break_type) === 'lunch' ? 'Lunch break' : 'Pause'} ended. Active shift tracking resumed.`
+    };
+  } catch (trackingError) {
+    return {
+      enabled: true,
+      mode: 'foreground-fallback',
+      lastSyncLabel:
+        trackingError instanceof Error
+          ? `Break ended, but background tracking fell back to manual/foreground sync: ${trackingError.message}`
+          : 'Break ended, but background tracking fell back to manual/foreground sync.'
+    };
+  }
+}
+
 export async function getTrackingDiagnostics(): Promise<TrackingDiagnostics> {
   const context = await readStoredShiftContext();
+  const activeBreak = await readStoredBreakContext();
 
   return {
     taskDefined: TaskManager.isTaskDefined(LOCATION_TASK_NAME),
     taskRegistered: await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME),
     platform: Platform.OS,
-    activeShiftId: context?.shiftId ?? null
+    activeShiftId: context?.shiftId ?? null,
+    activeBreakType: activeBreak?.breakType ?? null
   };
 }
 
 export async function resumeShiftTrackingIfNeeded() {
   const context = await readStoredShiftContext();
   if (!context) return;
+
+  const activeBreak = await readStoredBreakContext();
 
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user?.id) return;
@@ -271,9 +368,13 @@ export async function resumeShiftTrackingIfNeeded() {
 
   if (!activeShift) {
     await writeStoredShiftContext(null);
-    if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)) {
-      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-    }
+    await writeStoredBreakContext(null);
+    await stopBackgroundUpdatesIfRunning();
+    return;
+  }
+
+  if (activeBreak?.shiftId === context.shiftId) {
+    await stopBackgroundUpdatesIfRunning();
     return;
   }
 

@@ -1,4 +1,3 @@
-import { Link } from 'expo-router';
 import { SafeAreaView, Text, View } from 'react-native';
 
 export default function AdminScreen() {
@@ -13,9 +12,6 @@ export default function AdminScreen() {
           This keeps active-shift GPS tracking scoped to employees while giving owners a dedicated operations console.
         </Text>
       </View>
-      <Link href="https://supabase.com/dashboard/project/gfvxqomihlolxhfigebk" style={{ color: '#c4b5fd', fontSize: 16 }}>
-        Open Supabase project dashboard
-      </Link>
     </SafeAreaView>
   );
 }

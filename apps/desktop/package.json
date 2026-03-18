@@ -1,0 +1,81 @@
+{
+  "name": "xeems-desktop",
+  "version": "1.0.0",
+  "description": "XEEMS Desktop Client - Employee efficiency monitoring for laptops",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.main.json && electron . --dev",
+    "dev:renderer": "vite",
+    "build": "npm run build:renderer && npm run build:main",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@supabase/functions-js": "^2.4.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^17.3.1",
+    "electron-log": "^5.1.7",
+    "electron-store": "^8.2.0",
+    "get-windows": "^9.3.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.8",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.2"
+  },
+  "build": {
+    "appId": "com.xa-tech.xeems-desktop",
+    "productName": "XEEMS",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      ".env"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/XEEMS_ICON.png"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/XEEMS_ICON.ico"
+    },
+    "asar": true,
+    "asarUnpack": [],
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/XEEMS_ICON.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

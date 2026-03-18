@@ -1,24 +1,35 @@
 {
   "expo": {
-    "name": "FieldOps Consent",
-    "slug": "fieldops-gps",
-    "scheme": "fieldopsconsent",
-    "plugins": [],
+    "name": "XEEMS",
+    "slug": "xeems-mobile",
+    "scheme": "xeems",
+    "jsEngine": "jsc",
+    "icon": "./assets/xeems-icon.png",
+    "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
     },
+    "splash": {
+      "image": "./assets/xeems-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#08121e"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fieldops.gps",
+      "bundleIdentifier": "com.xeems.employee",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "FieldOps uses your location only while you are on an active shift and after you explicitly consent.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "FieldOps can continue collecting location in the background only while your shift is active, so owners can see field attendance.",
+        "NSLocationWhenInUseUsageDescription": "XEEMS uses your location on this company-issued phone while your shift is active and under written company notification.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "XEEMS can continue collecting location in the background only while your shift is active on this company-issued phone.",
         "UIBackgroundModes": ["location"]
       }
     },
     "android": {
-      "package": "com.fieldops.gps",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"]
+      "package": "com.xeems.employee",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/xeems-icon.png",
+        "backgroundColor": "#08121e"
+      }
     },
     "extra": {
       "eas": {

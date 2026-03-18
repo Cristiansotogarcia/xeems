@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link, router } from 'expo-router';
-import { SafeAreaView, Text, TextInput, Pressable, View } from 'react-native';
-import { DEFAULT_SUPABASE_URL } from '@fieldops/shared';
+import { router } from 'expo-router';
+import { Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 export default function SignInScreen() {
@@ -74,7 +73,7 @@ export default function SignInScreen() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          placeholder="••••••••"
+          placeholder="Temporary password"
           placeholderTextColor="#64748b"
           style={{ backgroundColor: '#111827', color: 'white', padding: 14, borderRadius: 12 }}
         />
@@ -83,13 +82,10 @@ export default function SignInScreen() {
         <Text style={{ color: '#082f49', textAlign: 'center', fontWeight: '700' }}>{loading ? 'Signing in...' : 'Continue as employee'}</Text>
       </Pressable>
       <View style={{ backgroundColor: '#111827', padding: 16, borderRadius: 12, gap: 6 }}>
-        <Text style={{ color: '#7dd3fc', fontWeight: '700' }}>Environment</Text>
-        <Text style={{ color: '#cbd5e1' }}>Supabase URL defaults to {DEFAULT_SUPABASE_URL}</Text>
+        <Text style={{ color: '#7dd3fc', fontWeight: '700' }}>XEEMS mobile</Text>
+        <Text style={{ color: '#cbd5e1' }}>Use this app to start and end shifts, lunch breaks, and pause tracking on the company phone.</Text>
         <Text style={{ color: '#cbd5e1' }}>{status}</Text>
       </View>
-      <Link href="https://supabase.com/dashboard/project/gfvxqomihlolxhfigebk" style={{ color: '#c4b5fd' }}>
-        Supabase project dashboard
-      </Link>
     </SafeAreaView>
   );
 }

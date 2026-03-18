@@ -1,93 +1,83 @@
-# Workforce GPS Consent MVP
+# XEEMS
 
-Consent-based workforce location tracking MVP for active-shift attendance, live field visibility, and geofence events.
+## Overview
 
-## What changed in this pass
+XEEMS is XA Tech's employee monitoring platform for company-owned devices.
 
-- Added Expo Task Manager + Expo Location architecture for active-shift-only tracking on the employee app
-- Added immediate ping sync plus background registration fallback messaging
-- Expanded sites into a client/site location model with address + timezone fields
-- Added owner dashboard marker scaffolding for named client locations
-- Added Aruba-friendly seed SQL and clearer local testing guidance
+- `apps/web` is the admin control plane
+- `apps/desktop` is the managed Windows laptop agent
+- `apps/mobile` is the employee shift and GPS app for company-issued phones
+- `supabase/schema.sql` is the current database source of truth
 
-## Principles
+This repository no longer targets the original FieldOps consent-first MVP. The active product model is:
 
-- Transparent, never covert
-- Consent-first onboarding
-- Work-context-only tracking
-- Data minimization and retention controls
-- Clear employee vs owner/admin role separation
+- Admin creates every employee account
+- Employees sign in to the desktop app once to enroll a company laptop
+- The desktop agent persists across restarts and keeps monitoring unless an admin disables the employee or device
+- Mobile tracking stays shift-based for field operations, but runs under written company notification on company-owned phones instead of in-app consent capture
 
-## Stack
+## Platform Model
 
-- Monorepo with pnpm + Turborepo
-- Mobile: Expo React Native + TypeScript
-- Admin web: Next.js 15 + TypeScript
-- Backend: Supabase (Auth, Postgres, Realtime, RPC, Edge Functions later)
-- Shared package: types, constants, env helpers
+### Web
+- Admin-only Next.js dashboard
+- Employee provisioning, password reset, activation control
+- Desktop device visibility plus remote enable/disable controls
+- Active shifts, sites, and geofence events
 
-## Apps
+### Desktop
+- Electron-based managed Windows agent
+- Real active-window tracking with idle detection
+- Persistent Supabase session storage and device enrollment
+- Auto-start on login for packaged Windows builds
+- No employee-facing stop, pause, or logout path after enrollment
 
-- `apps/mobile` — employee app for sign-in, consent, and active-shift tracking
-- `apps/web` — owner/admin dashboard
-- `packages/shared` — shared contracts, constants, project/env helpers
-- `supabase` — schema and SQL bootstrap
-- `docs` — product and implementation docs
+### Mobile
+- Expo app for field shifts on company-issued phones
+- Shift start/end, GPS permission flow, background location updates
+- Notification-based deployment copy instead of in-app consent collection
 
-## Quick start
+## Environment
 
-1. Install Node 20+ and pnpm 9+
-2. Copy env files:
-   - root: `.env.example` → `.env`
-   - web: `apps/web/.env.example` → `apps/web/.env.local`
-   - mobile: `apps/mobile/.env.example` → `apps/mobile/.env`
-3. In Supabase, copy the **anon key** and **service role key** from Project Settings → API
-4. Apply `supabase/schema.sql`
-5. Apply `supabase/seed.sql`
-6. Create at least:
-   - one owner/admin user
-   - one employee user
-7. Promote the owner/admin account in SQL:
-   - `update public.profiles set role = 'admin' where id = '<OWNER_USER_UUID>';`
-8. Run `pnpm install`
-9. Run `pnpm dev`
-10. Use a dev build / preview build for mobile background-location testing. Expo Go is not sufficient for reliable background validation.
+Copy the templates before local development:
 
-## Auth and role model
+- root: `.env.example` -> `.env`
+- web: `apps/web/.env.example` -> `apps/web/.env.local`
+- mobile: `apps/mobile/.env.example` -> `apps/mobile/.env`
+- desktop: `apps/desktop/.env.example` -> `apps/desktop/.env`
 
-- Employee accounts use the **mobile app**
-- Owner/admin accounts use the **web dashboard**
-- Role is stored in `public.profiles.role`
-- New profiles are auto-created from `auth.users` via trigger
-- Admins can read operational data; employees can only access their own profile/shift/consent/pings
+Required variables:
 
-## Supabase project hookup
+- Web: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Mobile: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- Desktop: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 
-Project name: `GPS Monitoring`
+## Local Setup
 
-Project URL:
-`https://gfvxqomihlolxhfigebk.supabase.co`
+1. Install Node 20+ and pnpm 9+.
+2. Run `pnpm install`.
+3. Apply `supabase/schema.sql`.
+4. Apply `supabase/seed.sql`.
+5. Create an initial admin user in Supabase Auth.
+6. Promote that user in SQL:
 
-Do **not** commit live anon/service keys. Keep them in local env files only.
+```sql
+update public.profiles
+set role = 'admin'
+where id = '<ADMIN_USER_UUID>';
+```
 
-## Current MVP state
+7. Start the workspace with `pnpm dev`.
 
-Working directionally:
-- mobile employee sign-in via Supabase
-- mobile role gate that rejects owner/admin login on employee app
-- consent insert + start/end shift RPC flow
-- Expo background task registration attempt for active-shift-only tracking
-- immediate location ping sync when shift tracking starts
-- web owner/admin sign-in via Supabase
-- web dashboard loading active shifts, recent geofence events, and sites from Supabase
-- owner dashboard marker scaffold for named client/site locations
-- database policies closer to real role separation
+## Verification
 
-Still incomplete:
-- production-hard offline retry strategy for location sync
-- true map provider integration (current dashboard map is a lightweight coordinate scaffold)
-- site CRUD forms and richer owner workflows
-- stronger production route protection/middleware on the web app
-- end-to-end validation against a fully configured live Supabase project on real devices
+The current workspace has been validated with:
 
-See `docs/implementation-plan.md` for the setup checklist and MVP limitations.
+- `pnpm typecheck`
+- `pnpm --filter fieldops-web build`
+- `pnpm --filter xeems-desktop build`
+- `pnpm --filter @fieldops/mobile build`
+
+## Notes
+
+- `consent_records` still exists in the schema for legacy compatibility, but the active XEEMS deployment no longer requires in-app consent capture to start tracking.
+- The root `postinstall` script normalizes the web app's React resolution under pnpm so Next.js production builds do not split React contexts during `_error` prerendering.

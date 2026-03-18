@@ -1,97 +1,75 @@
 # Technical Architecture
 
-## Stack choice
+## Stack
 
-Expo React Native for the employee app, Next.js for the owner/admin dashboard, and Supabase for auth + Postgres + RLS.
+- Expo React Native for the employee mobile app
+- Electron + React for the managed Windows desktop agent
+- Next.js for the admin dashboard
+- Supabase for auth, Postgres, RLS, and RPCs
 
-## Why this stack
-
-- Expo is the fastest route to employee mobile shift UX and device permission handling
-- Supabase gives auth, SQL, RLS, and realtime-friendly primitives with low backend overhead
-- Next.js is enough for an owner operations dashboard without overbuilding
-- Shared TypeScript constants reduce drift across apps
-
-## High-level components
+## High-Level Components
 
 ### Mobile app (`apps/mobile`)
 - employee sign-in
-- employee shift console
-- consent capture before shift activation
-- location service abstraction (real background sync still pending)
+- shift start / shift end flow
+- OS-level location permission requests
+- background location updates while a shift is active
+
+### Desktop app (`apps/desktop`)
+- employee one-time sign-in
+- device enrollment into `desktop_devices`
+- active-window tracking and idle detection
+- persistent background sync tied to backend device state
 
 ### Web app (`apps/web`)
-- owner/admin sign-in
-- operations dashboard for active shifts, sites, and recent geofence events
-
-### Shared package (`packages/shared`)
-- domain types
-- Supabase project constants
-- environment helpers
+- admin-only sign-in
+- employee provisioning
+- password reset and employee activation management
+- desktop device visibility and remote device disable/enable
+- shift, site, and geofence dashboard views
 
 ### Supabase backend
 - Auth users
-- `profiles`, `sites`, `consent_records`, `shifts`, `location_pings`, `geofence_events`
-- RLS policies for employee-vs-admin separation
-- RPCs for `start_shift` and `end_my_active_shift`
-- auth trigger to auto-bootstrap profiles
+- `profiles`, `desktop_devices`, `sites`, `shifts`, `location_pings`, `geofence_events`, `activity_logs`, `idle_events`
+- optional legacy `consent_records`
+- RLS policies for worker/admin separation
+- `start_shift` and `end_my_active_shift` RPCs
+- auth trigger that bootstraps `profiles`
 
-## Role split
+## Role Split
 
-### Employee
-- authenticates in mobile app
-- can read own profile / shifts / consent / pings
-- can only create shift-scoped tracking data for self
-- cannot use owner/admin dashboard
+### Worker
+- signs in to mobile or desktop
+- can only write self-owned operational data allowed by RLS
+- cannot use the admin dashboard
 
-### Owner/admin
-- authenticates in web app
-- can read org operational data
-- can manage sites in SQL/RLS model
-- cannot use employee mobile shift tracking flow
+### Admin
+- signs in to web only
+- provisions employees
+- manages employee active state and desktop device monitoring state
+- can read org-wide operational data
 
-## Data model notes
+## Tracking Lifecycle
 
-### profiles
-- mirrors `auth.users`
-- role is the app access switch (`worker` or `admin`)
+### Desktop
+1. Admin creates employee account
+2. Employee signs in once on a company laptop
+3. Desktop app upserts an enrolled `desktop_devices` row
+4. Session persists locally and monitoring resumes after restart
+5. Admin can disable the employee or device to stop future capture
 
-### consent_records
-- versioned consent trail
-- used as a prerequisite for starting a shift
+### Mobile
+1. Employee signs in on a company-issued phone
+2. Employee starts a shift
+3. App requests OS location permissions
+4. App calls `start_shift(...)`
+5. GPS collection runs only while the shift is active
+6. Employee ends the shift
+7. App calls `end_my_active_shift()`
 
-### shifts
-- active shift is the permission boundary for tracking
-- partial unique index prevents multiple active shifts per employee
+## Compliance Stance
 
-### location_pings
-- only insertable when the authenticated user owns the active shift
-
-### geofence_events
-- currently generated with nearest-site placeholder logic after ping insert
-- good enough for MVP plumbing, not final geofence quality
-
-## Tracking lifecycle
-
-1. employee signs in on mobile
-2. employee sees disclosure and starts shift
-3. app records consent row
-4. app calls `start_shift(...)`
-5. only then should GPS collection/sync run
-6. employee ends shift
-7. app calls `end_my_active_shift()`
-8. GPS collection must stop immediately
-
-## Security and compliance stance
-
-- RLS enabled on every operational table
-- no covert or off-shift tracking path should exist
-- owner/admin view is intentionally separated from employee app
-- service role remains for trusted backend tasks only
-- live secrets stay in local env files, not committed repo files
-
-## Known MVP gaps
-
-- no production-grade server-side web session enforcement yet
-- no actual background Expo task + ping uploader yet
-- geofence calculations are intentionally simplistic
-- no seed automation or migration tooling yet
+- This deployment assumes company-owned devices plus written employee notification
+- Desktop monitoring is transparent but not employee-controllable after enrollment
+- Mobile tracking remains shift-scoped
+- Service-role access is limited to trusted server code in the web app
