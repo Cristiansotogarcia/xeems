@@ -4,6 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatSiteAddress } from '@fieldops/shared';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
+import './dashboard.css';
+import Badge from './components/Badge';
+import Card from './components/Card';
+import EmptyState from './components/EmptyState';
+import Modal from './components/Modal';
+import SectionHeader from './components/SectionHeader';
+import StatCard from './components/StatCard';
 
 interface DashboardState {
   loading: boolean;
@@ -117,25 +124,6 @@ interface DesktopActivityRow {
   desktop_devices: Array<{ device_name: string | null }> | null;
 }
 
-function formatTimestamp(value: string | null) {
-  if (!value) return 'n/a';
-  return new Date(value).toLocaleString();
-}
-
-function getProfileLabel(profile: { full_name?: string | null; email?: string | null } | null | undefined) {
-  const fullName = profile?.full_name?.trim();
-  if (fullName) {
-    return fullName;
-  }
-
-  const email = profile?.email?.trim();
-  if (email) {
-    return email;
-  }
-
-  return 'Unknown employee';
-}
-
 const REFRESH_INTERVAL_MS = 30000;
 const defaultDesktopDownloadUrl = 'https://github.com/Cristiansotogarcia/xeems/releases/download/v1.0.0/XEEMS-1.0.0.exe';
 const defaultAndroidDownloadUrl = 'https://expo.dev/artifacts/eas/kFW8kcMSM1a7RzZ6f8kgzb.apk';
@@ -160,6 +148,33 @@ const downloadTargets = [
     cta: 'Open iPhone install link'
   }
 ] as const;
+
+function formatTimestamp(value: string | null) {
+  if (!value) return 'n/a';
+  return new Date(value).toLocaleString();
+}
+
+function formatDateTime(value: string) {
+  try {
+    return new Date(value).toLocaleString('en-US', { hour12: false });
+  } catch {
+    return value;
+  }
+}
+
+function getProfileLabel(profile: { full_name?: string | null; email?: string | null } | null | undefined) {
+  const fullName = profile?.full_name?.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  const email = profile?.email?.trim();
+  if (email) {
+    return email;
+  }
+
+  return 'Unknown employee';
+}
 
 function LandingPage() {
   const router = useRouter();
@@ -194,59 +209,35 @@ function LandingPage() {
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
-          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Admin portal</div>
-            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Live oversight</h2>
-            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Create employee accounts, manage enrolled laptops, and review live field and desktop activity.</p>
-          </div>
-          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Desktop</div>
-            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Managed laptop agent</h2>
-            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Employees sign in once on the company laptop and XEEMS keeps the desktop agent running after enrollment.</p>
-          </div>
-          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Mobile</div>
-            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Shift and GPS workflow</h2>
-            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Employees start and end shifts, lunch breaks, and pauses from the company phone while GPS stays tied to active work time.</p>
-          </div>
-        </section>
-
-        <section style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gap: 8, textAlign: 'center' }}>
-            <h2 style={{ margin: 0, color: '#10233d' }}>Download XEEMS apps</h2>
-            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Use the links below to install the employee apps on company devices.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
-            {downloadTargets.map((target) => (
-              <div key={target.name} style={{ padding: 24, borderRadius: 24, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(148,163,184,0.18)', display: 'grid', gap: 14, boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-                <div>
-                  <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{target.name}</div>
-                  <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>{target.description}</p>
-                </div>
-                {target.url ? (
-                  <a
-                    href={target.url}
-                    style={{
-                      display: 'inline-flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      padding: '14px 16px',
-                      borderRadius: 14,
-                      background: '#1d62d1',
-                      color: '#fff',
-                      fontWeight: 700
-                    }}
-                  >
-                    {target.cta}
-                  </a>
-                ) : (
-                  <div style={{ padding: '14px 16px', borderRadius: 14, background: '#eef4fa', color: '#5f7288', fontWeight: 600 }}>
-                    Download link not configured yet
-                  </div>
-                )}
+          {downloadTargets.map((target) => (
+            <div key={target.name} style={{ padding: 24, borderRadius: 24, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(148,163,184,0.18)', display: 'grid', gap: 14, boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+              <div>
+                <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{target.name}</div>
+                <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>{target.description}</p>
               </div>
-            ))}
-          </div>
+              {target.url ? (
+                <a
+                  href={target.url}
+                  style={{
+                    display: 'inline-flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '14px 16px',
+                    borderRadius: 14,
+                    background: '#1d62d1',
+                    color: '#fff',
+                    fontWeight: 700
+                  }}
+                >
+                  {target.cta}
+                </a>
+              ) : (
+                <div style={{ padding: '14px 16px', borderRadius: 14, background: '#eef4fa', color: '#5f7288', fontWeight: 600 }}>
+                  Download link not configured yet
+                </div>
+              )}
+            </div>
+          ))}
         </section>
         <style jsx>{`
           @media (max-width: 720px) {
@@ -262,56 +253,6 @@ function LandingPage() {
         `}</style>
       </div>
     </main>
-  );
-}
-
-function SiteMap({ sites }: { sites: DashboardState['sites'] }) {
-  const bounds = useMemo(() => {
-    if (sites.length === 0) return null;
-
-    const latitudes = sites.map((site) => site.latitude);
-    const longitudes = sites.map((site) => site.longitude);
-
-    return {
-      minLat: Math.min(...latitudes),
-      maxLat: Math.max(...latitudes),
-      minLng: Math.min(...longitudes),
-      maxLng: Math.max(...longitudes)
-    };
-  }, [sites]);
-
-  return (
-    <div style={{ background: 'rgba(255, 255, 255, 0.94)', borderRadius: 24, padding: 22, minHeight: 380, display: 'grid', gap: 12, border: '1px solid rgba(148, 163, 184, 0.18)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-      <div>
-        <h2 style={{ marginTop: 0 }}>Field site map</h2>
-        <p style={{ color: '#5f7288', marginBottom: 0 }}>
-          Active mobile work sites stay visible here while desktop devices are managed separately as company-owned endpoints.
-        </p>
-      </div>
-      <div style={{ position: 'relative', borderRadius: 20, minHeight: 260, background: 'linear-gradient(180deg, #f4f8fb 0%, #dde9f4 100%)', border: '1px solid #d5e2ee', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(148,163,184,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.1) 1px, transparent 1px)', backgroundSize: '38px 38px' }} />
-        {sites.length === 0 ? (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#355372' }}>No active client sites yet.</div>
-        ) : (
-          sites.map((site) => {
-            const latRange = (bounds?.maxLat ?? 0) - (bounds?.minLat ?? 0) || 0.05;
-            const lngRange = (bounds?.maxLng ?? 0) - (bounds?.minLng ?? 0) || 0.05;
-            const top = 12 + (((bounds?.maxLat ?? site.latitude) - site.latitude) / latRange) * 76;
-            const left = 8 + ((site.longitude - (bounds?.minLng ?? site.longitude)) / lngRange) * 82;
-
-            return (
-              <div key={site.id} style={{ position: 'absolute', top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)', maxWidth: 180 }}>
-                <div style={{ width: 14, height: 14, borderRadius: 999, background: '#f97316', border: '3px solid rgba(253,186,116,0.55)', boxShadow: '0 0 0 6px rgba(249,115,22,0.18)' }} />
-                <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 12, background: 'rgba(255, 255, 255, 0.96)', border: '1px solid #d5e2ee', boxShadow: '0 12px 24px rgba(16,35,61,0.08)' }}>
-                  <div style={{ fontWeight: 700 }}>{site.name}</div>
-                  <div style={{ color: '#355372', fontSize: 13 }}>{site.clientName ?? 'Client TBD'}</div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -332,6 +273,11 @@ export default function DashboardPage() {
     desktopActivity: [],
     lastIssuedPassword: null
   });
+  const [extendedEvents, setExtendedEvents] = useState<DashboardState['recentEvents']>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [loadingExtendedEvents, setLoadingExtendedEvents] = useState(false);
+  const [showActivityModal, setShowActivityModal] = useState(false);
 
   async function getAccessToken() {
     const {
@@ -453,6 +399,12 @@ export default function DashboardPage() {
         throw shiftsError ?? eventsError ?? sitesError ?? employeesError ?? devicesError ?? desktopActivityError;
       }
 
+      const mappedEvents = ((recentEvents ?? []) as unknown as EventRow[]).map((event) => ({
+        id: event.id,
+        at: event.event_at,
+        label: `${getProfileLabel(event.profiles?.[0])} ${event.event_type} ${event.sites?.[0]?.name ?? 'site'}`
+      }));
+
       setState((current) => ({
         ...current,
         loading: false,
@@ -464,11 +416,7 @@ export default function DashboardPage() {
           siteName: shift.sites?.[0]?.name ?? 'Unassigned site',
           startedAt: shift.started_at ?? 'n/a'
         })),
-        recentEvents: ((recentEvents ?? []) as unknown as EventRow[]).map((event) => ({
-          id: event.id,
-          at: event.event_at,
-          label: `${getProfileLabel(event.profiles?.[0])} ${event.event_type} ${event.sites?.[0]?.name ?? 'site'}`
-        })),
+        recentEvents: mappedEvents,
         sites: ((sites ?? []) as SiteRow[]).map((site) => ({
           id: site.id,
           name: site.name,
@@ -518,12 +466,38 @@ export default function DashboardPage() {
           isProductive: entry.is_productive === true
         }))
       }));
+
+      setExtendedEvents((current) => (current.length > mappedEvents.length ? current : mappedEvents));
     } catch (error) {
       setState((current) => ({
         ...current,
         loading: false,
         error: error instanceof Error ? error.message : 'Unable to load dashboard.'
       }));
+    }
+  }
+
+  async function loadExtendedEvents() {
+    try {
+      setLoadingExtendedEvents(true);
+      setEventsError(null);
+      const { data, error } = await supabase
+        .from('geofence_events')
+        .select('id, event_at, event_type, profiles:profiles!geofence_events_user_id_fkey(*), sites(name)')
+        .order('event_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+
+      const mapped = ((data ?? []) as EventRow[]).map((event) => ({
+        id: event.id,
+        at: event.event_at,
+        label: `${getProfileLabel(event.profiles?.[0])} ${event.event_type} ${event.sites?.[0]?.name ?? 'site'}`
+      }));
+      setExtendedEvents(mapped);
+    } catch (error) {
+      setEventsError(error instanceof Error ? error.message : 'Unable to load events.');
+    } finally {
+      setLoadingExtendedEvents(false);
     }
   }
 
@@ -549,10 +523,10 @@ export default function DashboardPage() {
 
   const stats = useMemo(
     () => [
-      ['Active shifts', String(state.activeShifts.length)],
-      ['Employees', String(state.employees.length)],
-      ['Desktop devices', String(state.desktopDevices.length)],
-      ['Field sites', String(state.sites.length)]
+      { label: 'Active shifts', value: String(state.activeShifts.length), icon: '🟢', note: 'Live shift sessions' },
+      { label: 'Employees', value: String(state.employees.length), icon: '👥', note: 'Active worker accounts' },
+      { label: 'Desktop devices', value: String(state.desktopDevices.length), icon: '💻', note: 'Enrolled laptops' },
+      { label: 'Field sites', value: String(state.sites.length), icon: '📍', note: 'Active client locations' }
     ],
     [state.activeShifts.length, state.employees.length, state.desktopDevices.length, state.sites.length]
   );
@@ -627,244 +601,330 @@ export default function DashboardPage() {
     router.replace('/login');
   }
 
+  function handleOpenEvents() {
+    setShowEventsModal(true);
+    if (extendedEvents.length <= state.recentEvents.length) {
+      void loadExtendedEvents();
+    }
+  }
+
   if (isAuthenticated === false) {
     return <LandingPage />;
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        padding: 28,
-        background:
-          'radial-gradient(circle at top, rgba(14,165,233,0.12) 0%, rgba(249,250,251,0) 36%), linear-gradient(180deg, #f9fbfd 0%, #edf4fa 100%)',
-        display: 'grid',
-        gap: 18
-      }}
-    >
-      <section style={{ display: 'grid', gap: 10 }}>
-        <div style={{ color: '#f59e0b', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>XA Tech&apos;s Employee Efficiency Monitoring System</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'start', flexWrap: 'wrap' }}>
-          <div style={{ display: 'grid', gap: 10, maxWidth: 860 }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 380, maxWidth: '82vw', height: 'auto' }} />
-            <h1 style={{ margin: 0, fontSize: 42, letterSpacing: '-0.04em', color: '#10233d' }}>Admin operations dashboard</h1>
-            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>Monitor live activity, manage employees, and control company devices from one place.</p>
-            <div style={{ color: '#355372' }}>Signed in as: {state.adminName || '...'}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => void loadDashboard()} style={{ padding: '12px 16px', borderRadius: 14, border: 0, background: '#1d62d1', color: 'white', cursor: 'pointer', fontWeight: 700 }}>
-              Refresh
-            </button>
-            <button onClick={() => void handleSignOut()} style={{ padding: '12px 16px', borderRadius: 14, border: '1px solid #c6d5e3', background: '#ffffff', color: '#10233d', cursor: 'pointer' }}>
-              Sign out
-            </button>
-          </div>
+    <main className="page">
+      <Card className="hero">
+        <div className="tag">XEEMS ADMIN</div>
+        <div className="hero-row">
+          <h1>Admin operations dashboard</h1>
+          <p>Monitor live field shifts, desktop activity, and company devices from one view.</p>
+          <div className="muted">Signed in as: {state.adminName || '...'}</div>
         </div>
-        {state.lastIssuedPassword ? (
-          <div style={{ borderRadius: 18, padding: 16, background: 'rgba(29, 98, 209, 0.08)', border: '1px solid rgba(29,98,209,0.18)', color: '#183857' }}>
-            Latest temporary password: <strong>{state.lastIssuedPassword}</strong>
-          </div>
-        ) : null}
-        {state.error ? <div style={{ color: '#fca5a5' }}>{state.error}</div> : null}
-      </section>
+        <div className="actions">
+          <button className="button primary" onClick={() => void loadDashboard()}>Refresh</button>
+          <button className="button ghost" onClick={() => void handleSignOut()}>Sign out</button>
+        </div>
+        {state.lastIssuedPassword ? <div className="alert">Latest temporary password: <strong>{state.lastIssuedPassword}</strong></div> : null}
+        {state.error ? <div className="alert">{state.error}</div> : null}
+      </Card>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
-        {stats.map(([label, value]) => (
-          <div key={label} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 20, padding: 18, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-            <div style={{ color: '#5f7288', fontSize: 13 }}>{label}</div>
-            <div style={{ fontSize: 34, fontWeight: 800, marginTop: 8 }}>{state.loading ? '...' : value}</div>
-          </div>
+      <div className="grid-3" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+        {stats.map((stat) => (
+          <StatCard key={stat.label} label={stat.label} value={stat.value} note={stat.note} icon={stat.icon} loading={state.loading} />
         ))}
-      </section>
+      </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-        <form onSubmit={handleCreateEmployee} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 14, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <div>
-            <h2 style={{ marginTop: 0, marginBottom: 6 }}>Provision employee account</h2>
-            <p style={{ margin: 0, color: '#5f7288' }}>Create a worker account and issue the first sign-in password.</p>
-          </div>
-          <input
-            value={form.fullName}
-            onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
-            placeholder="Employee full name"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
-          />
-          <input
-            value={form.email}
-            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            placeholder="employee@company.com"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
-          />
-          <input
-            value={form.password}
-            onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-            placeholder="Temporary password"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
-          />
-          <button disabled={isSubmitting} style={{ padding: 14, borderRadius: 14, border: 0, background: '#f97316', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: isSubmitting ? 0.75 : 1 }}>
-            {isSubmitting ? 'Creating employee...' : 'Create employee'}
-          </button>
-        </form>
+      <div className="grid-2">
+        <Card className="spacious">
+          <SectionHeader title="Provision employee account" subtitle="Create a worker account and issue a password" />
+          <form onSubmit={handleCreateEmployee} style={{ display: 'grid', gap: 12 }}>
+            <input
+              value={form.fullName}
+              onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
+              placeholder="Employee full name"
+              style={{ padding: 12, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+            />
+            <input
+              value={form.email}
+              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              placeholder="employee@company.com"
+              style={{ padding: 12, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+            />
+            <input
+              value={form.password}
+              onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+              placeholder="Temporary password"
+              style={{ padding: 12, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+            />
+            <button disabled={isSubmitting} className="button primary" style={{ justifySelf: 'start' }}>
+              {isSubmitting ? 'Creating employee...' : 'Create employee'}
+            </button>
+          </form>
+        </Card>
 
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 12, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Operations summary</h2>
-          <div style={{ color: '#355372', lineHeight: 1.8 }}>
-            <div>Employee accounts, field shifts, desktop devices, and live activity are managed from this dashboard.</div>
-            <div>Use the tables below to reset passwords, disable accounts, and control enrolled laptops remotely.</div>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 16 }}>
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0 }}>Employee roster</h2>
-          <div style={{ display: 'grid', gap: 12 }}>
-            {state.employees.length === 0 ? <div style={{ color: '#5f7288' }}>No employees created yet.</div> : null}
-            {state.employees.map((employee) => (
-              <div key={employee.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <Card className="spacious">
+          <SectionHeader title="Desktop devices" subtitle="Heartbeat + control for enrolled laptops (auto-refreshes)" />
+          {state.desktopDevices.length === 0 ? (
+            <EmptyState message="No enrolled laptops yet." />
+          ) : (
+            <div className="table">
+              {state.desktopDevices.map((device) => (
+                <div className="row" key={device.id} style={{ gridTemplateColumns: '1fr 1fr auto' }}>
                   <div>
-                    <div style={{ fontWeight: 800 }}>{employee.fullName}</div>
-                    <div style={{ color: '#5f7288' }}>{employee.email ?? 'No email stored'}</div>
+                    <strong>{device.deviceName ?? 'Unnamed laptop'}</strong>
+                    <div className="muted">{device.workerName} {device.workerEmail ? `| ${device.workerEmail}` : ''}</div>
+                    <div className="meta">OS user: {device.osUsername ?? 'n/a'} · App: {device.appVersion ?? 'n/a'}</div>
                   </div>
-                  <div style={{ color: employee.isActive ? '#86efac' : '#fca5a5', fontWeight: 700 }}>
-                    {employee.isActive ? 'Active' : 'Disabled'}
+                  <div className="meta">
+                    Last seen {formatTimestamp(device.lastSeenAt)}
+                    <div style={{ marginTop: 6 }}>{device.deviceUuid}</div>
+                  </div>
+                  <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
+                    <Badge label={`Status: ${device.enrollmentStatus}`} variant="info" />
+                    <Badge label={device.monitoringEnabled ? 'Monitoring on' : 'Monitoring off'} variant={device.monitoringEnabled ? 'success' : 'warning'} />
+                    <button className="button ghost" onClick={() => void handleToggleDevice(device.id, !device.monitoringEnabled)}>
+                      {device.monitoringEnabled ? 'Disable' : 'Enable'}
+                    </button>
                   </div>
                 </div>
-                <div style={{ color: '#64748b', fontSize: 13 }}>Created {formatTimestamp(employee.createdAt)}</div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => void handleResetPassword(employee.id)} style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid #c6d5e3', background: '#ffffff', color: '#10233d', cursor: 'pointer' }}>
-                    Reset password
-                  </button>
-                  <button
-                    onClick={() => void handleToggleEmployee(employee.id, !employee.isActive)}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      border: 0,
-                      background: employee.isActive ? '#7f1d1d' : '#14532d',
-                      color: '#fff',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {employee.isActive ? 'Disable employee' : 'Reactivate employee'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0 }}>Desktop devices</h2>
-          <div style={{ color: '#5f7288', marginBottom: 12 }}>Auto-refreshes every 30 seconds so admins can see device heartbeat and control state without asking the employee.</div>
-          <div style={{ display: 'grid', gap: 12 }}>
-            {state.desktopDevices.length === 0 ? <div style={{ color: '#5f7288' }}>No enrolled laptops yet.</div> : null}
-            {state.desktopDevices.map((device) => (
-              <div key={device.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
+      <div className="grid-2">
+        <Card className="spacious">
+          <SectionHeader title="Employee roster" subtitle="Workers with account state" />
+          {state.employees.length === 0 ? (
+            <EmptyState message="No employees created yet." />
+          ) : (
+            <div className="table">
+              {state.employees.map((employee) => (
+                <div className="row" key={employee.id} style={{ gridTemplateColumns: '1fr 0.6fr auto' }}>
                   <div>
-                    <div style={{ fontWeight: 800 }}>{device.deviceName ?? 'Unnamed laptop'}</div>
-                    <div style={{ color: '#5f7288', fontSize: 14 }}>{device.workerName} {device.workerEmail ? `| ${device.workerEmail}` : ''}</div>
+                    <strong>{employee.fullName}</strong>
+                    <div className="muted">{employee.email ?? 'No email stored'}</div>
+                    <div className="meta">Created {formatTimestamp(employee.createdAt)}</div>
                   </div>
-                  <div style={{ color: device.monitoringEnabled ? '#86efac' : '#fca5a5', fontWeight: 700 }}>
-                    {device.monitoringEnabled ? 'Monitoring on' : 'Monitoring off'}
+                  <div>{employee.isActive ? <Badge label="Active" variant="success" /> : <Badge label="Disabled" variant="warning" />}</div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button className="button ghost" onClick={() => void handleResetPassword(employee.id)}>Reset password</button>
+                    <button className="button ghost" onClick={() => void handleToggleEmployee(employee.id, !employee.isActive)}>
+                      {employee.isActive ? 'Disable' : 'Reactivate'}
+                    </button>
                   </div>
                 </div>
-                <div style={{ color: '#5f7288', fontSize: 13 }}>OS user: {device.osUsername ?? 'n/a'} | App: {device.appVersion ?? 'n/a'}</div>
-                <div style={{ color: '#64748b', fontSize: 13 }}>Last seen {formatTimestamp(device.lastSeenAt)}</div>
-                <div style={{ color: '#64748b', fontSize: 12, wordBreak: 'break-all' }}>{device.deviceUuid}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#355372', fontSize: 13 }}>Status: {device.enrollmentStatus}</div>
-                  <button
-                    onClick={() => void handleToggleDevice(device.id, !device.monitoringEnabled)}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      border: 0,
-                      background: device.monitoringEnabled ? '#7f1d1d' : '#14532d',
-                      color: '#fff',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {device.monitoringEnabled ? 'Disable device' : 'Enable device'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              ))}
+            </div>
+          )}
+        </Card>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 16 }}>
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <div style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-            <h2 style={{ margin: 0 }}>Live desktop monitor</h2>
-            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>
-              Recent laptop activity from enrolled XEEMS desktop agents. This feed refreshes automatically every 30 seconds.
-            </p>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {state.desktopActivity.length === 0 ? <div style={{ color: '#5f7288' }}>No desktop activity captured yet.</div> : null}
-            {state.desktopActivity.map((entry) => (
-              <div key={entry.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ fontWeight: 800 }}>{entry.appName}</div>
-                  <div style={{ color: entry.isProductive ? '#86efac' : '#fbbf24', fontWeight: 700 }}>{entry.category.replaceAll('_', ' ')}</div>
+        <Card className="spacious">
+          <SectionHeader
+            title="Live desktop monitor"
+            subtitle="Latest laptop activity (trimmed to 10)"
+            action={<button className="button ghost" onClick={() => setShowActivityModal(true)}>View all activity</button>}
+          />
+          {state.desktopActivity.length === 0 ? (
+            <EmptyState message="No desktop activity captured yet." />
+          ) : (
+            <div className="feed-list">
+              {state.desktopActivity.slice(0, 10).map((entry) => (
+                <div className="feed-item" key={entry.id}>
+                  <div className="feed-time">{formatDateTime(entry.at)}</div>
+                  <div className="feed-label">
+                    <div><strong>{entry.appName}</strong> · {entry.category.replaceAll('_', ' ')}</div>
+                    <div className="muted">{entry.windowTitle}</div>
+                    <div className="meta">{entry.workerName} | {entry.deviceName}</div>
+                  </div>
                 </div>
-                <div style={{ color: '#355372' }}>{entry.windowTitle}</div>
-                <div style={{ color: '#5f7288', fontSize: 13 }}>{entry.workerName} | {entry.deviceName}</div>
-                <div style={{ color: '#64748b', fontSize: 13 }}>{formatTimestamp(entry.at)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid-2">
         <SiteMap sites={state.sites} />
-      </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0 }}>Client/site registry</h2>
-          <ul style={{ paddingLeft: 18 }}>
-            {state.sites.length === 0 ? <li>No active sites configured.</li> : null}
-            {state.sites.map((site) => (
-              <li key={site.id} style={{ marginBottom: 14 }}>
-                <strong>{site.name}</strong> | {site.clientName ?? 'No client name'}
-                <div style={{ color: '#5f7288' }}>{site.addressLabel || 'Address not set yet'}</div>
-                <div style={{ color: '#5f7288' }}>
-                  {site.latitude.toFixed(5)}, {site.longitude.toFixed(5)} | radius {site.radius}m | {site.timezone ?? 'America/Aruba'}
+        <Card className="spacious">
+          <SectionHeader title="Client/site registry" subtitle="Active client locations with address + timezone" />
+          {state.sites.length === 0 ? (
+            <EmptyState message="No active sites configured yet." action={<span className="quiet-link">Add sites in Supabase or seed SQL</span>} />
+          ) : (
+            <div className="table">
+              {state.sites.map((site) => (
+                <div className="row" key={site.id}>
+                  <div>
+                    <strong>{site.name}</strong>
+                    <div className="muted">{site.clientName ?? 'No client name'}</div>
+                  </div>
+                  <div className="address">{site.addressLabel || 'Address not set yet'}</div>
+                  <div className="meta">
+                    {site.latitude.toFixed(5)}, {site.longitude.toFixed(5)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <Badge label={`Radius ${site.radius}m`} variant="info" />
+                    <Badge label={site.timezone ?? 'America/Aruba'} variant="neutral" />
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 16 }}>
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0 }}>Active field shifts</h2>
-          <ul style={{ paddingLeft: 18 }}>
-            {state.activeShifts.length === 0 ? <li>No active shifts yet.</li> : null}
-            {state.activeShifts.map((shift) => (
-              <li key={shift.id} style={{ marginBottom: 12 }}>
-                <strong>{shift.workerName}</strong> | {shift.siteName} | started {formatTimestamp(shift.startedAt)}
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="grid-2">
+        <Card className="spacious">
+          <SectionHeader title="Active field shifts" subtitle="Live shift roster" />
+          {state.activeShifts.length === 0 ? (
+            <EmptyState message="No active shifts yet." />
+          ) : (
+            <div className="table">
+              {state.activeShifts.map((shift) => (
+                <div className="row condensed" key={shift.id}>
+                  <strong>{shift.workerName}</strong>
+                  <div className="muted">{shift.siteName}</div>
+                  <div className="meta">Started {formatDateTime(shift.startedAt)}</div>
+                  <span className="chip">On shift</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
 
-        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0 }}>Recent field events</h2>
-          <ul style={{ paddingLeft: 18 }}>
-            {state.recentEvents.length === 0 ? <li>No geofence events yet.</li> : null}
-            {state.recentEvents.map((event) => (
-              <li key={event.id} style={{ marginBottom: 12 }}>
-                <strong>{formatTimestamp(event.at)}</strong> | {event.label}
-              </li>
+        <Card className="spacious">
+          <SectionHeader
+            title="Recent field events"
+            subtitle="Latest 10 geofence events"
+            action={
+              <button className="button ghost" onClick={handleOpenEvents}>
+                View all events
+              </button>
+            }
+          />
+          {state.recentEvents.length === 0 ? (
+            <EmptyState message="No geofence events yet." />
+          ) : (
+            <div className="feed-list">
+              {state.recentEvents.slice(0, 10).map((event) => (
+                <div className="feed-item" key={event.id}>
+                  <div className="feed-time">{formatDateTime(event.at)}</div>
+                  <div className="feed-label">{event.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <Modal
+        title="All recent field events"
+        open={showEventsModal}
+        onClose={() => setShowEventsModal(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            {eventsError ? <div className="alert" style={{ margin: 0 }}>{eventsError}</div> : <div className="muted">Showing up to 50 most recent events</div>}
+            <button className="button ghost" onClick={() => setShowEventsModal(false)}>Close</button>
+          </div>
+        }
+      >
+        {loadingExtendedEvents ? (
+          <div className="empty">Loading events…</div>
+        ) : extendedEvents.length === 0 ? (
+          <EmptyState message="No events to display yet." />
+        ) : (
+          <div className="feed-list" style={{ maxHeight: 'unset' }}>
+            {extendedEvents.map((event) => (
+              <div className="feed-item" key={event.id}>
+                <div className="feed-time">{formatDateTime(event.at)}</div>
+                <div className="feed-label">{event.label}</div>
+              </div>
             ))}
-          </ul>
-        </div>
-      </section>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title="All desktop activity"
+        open={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        footer={<button className="button ghost" onClick={() => setShowActivityModal(false)}>Close</button>}
+      >
+        {state.desktopActivity.length === 0 ? (
+          <EmptyState message="No desktop activity captured yet." />
+        ) : (
+          <div className="feed-list" style={{ maxHeight: 'unset' }}>
+            {state.desktopActivity.map((entry) => (
+              <div className="feed-item" key={entry.id}>
+                <div className="feed-time">{formatDateTime(entry.at)}</div>
+                <div className="feed-label">
+                  <div><strong>{entry.appName}</strong> · {entry.category.replaceAll('_', ' ')}</div>
+                  <div className="muted">{entry.windowTitle}</div>
+                  <div className="meta">{entry.workerName} | {entry.deviceName}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </main>
+  );
+}
+
+function SiteMap({ sites }: { sites: DashboardState['sites'] }) {
+  const bounds = useMemo(() => {
+    if (sites.length === 0) return null;
+    const latitudes = sites.map((site) => site.latitude);
+    const longitudes = sites.map((site) => site.longitude);
+    return {
+      minLat: Math.min(...latitudes),
+      maxLat: Math.max(...latitudes),
+      minLng: Math.min(...longitudes),
+      maxLng: Math.max(...longitudes)
+    };
+  }, [sites]);
+
+  return (
+    <Card className="map-card">
+      <SectionHeader title="Field site map" subtitle="Active mobile sites; desktop devices managed separately." />
+      <div className="legend">
+        <span className="legend-dot" />
+        Active client sites mapped to rough coordinates
+      </div>
+      <div className="map-surface">
+        <div className="map-grid" />
+        {sites.length === 0 ? (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary)' }}>
+            No active client sites yet.
+          </div>
+        ) : (
+          sites.map((site) => {
+            const latRange = (bounds?.maxLat ?? 0) - (bounds?.minLat ?? 0) || 0.05;
+            const lngRange = (bounds?.maxLng ?? 0) - (bounds?.minLng ?? 0) || 0.05;
+            const top = 12 + (((bounds?.maxLat ?? site.latitude) - site.latitude) / latRange) * 76;
+            const left = 8 + ((site.longitude - (bounds?.minLng ?? site.longitude)) / lngRange) * 82;
+
+            return (
+              <div key={site.id} style={{ position: 'absolute', top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}>
+                <div className="legend-dot" style={{ width: 14, height: 14, boxShadow: '0 0 0 6px rgba(14,165,233,0.18)' }} />
+                <div className="marker-card">
+                  <div style={{ fontWeight: 700 }}>{site.name}</div>
+                  <div style={{ color: '#7dd3fc', fontSize: 13 }}>{site.clientName ?? 'Client TBD'}</div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      {sites.length > 0 ? (
+        <div className="meta">
+          Bounding box: {sites.length} marker(s) across {((bounds?.maxLat ?? 0) - (bounds?.minLat ?? 0)).toFixed(2)} lat /{' '}
+          {((bounds?.maxLng ?? 0) - (bounds?.minLng ?? 0)).toFixed(2)} lng span
+        </div>
+      ) : null}
+    </Card>
   );
 }
