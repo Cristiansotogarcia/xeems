@@ -15,7 +15,11 @@ const startHidden = process.argv.includes('--hidden');
 
 function loadEnvFile(): void {
   const envPaths = app.isPackaged
-    ? [path.join(path.dirname(process.execPath), '.env')]
+    ? [
+        path.join(path.dirname(process.execPath), '.env'),
+        path.join(process.resourcesPath, '.env'),
+        path.join(process.resourcesPath, 'app.asar', '.env')
+      ]
     : [path.join(__dirname, '../../.env.local'), path.join(__dirname, '../../.env')];
 
   for (const envPath of envPaths) {
@@ -123,6 +127,7 @@ function createWindow(): void {
     minHeight: 580,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#f4f8fb',
     icon: resolveAssetPath('XEEMS_ICON.png'),
     title: 'XEEMS',
     webPreferences: {

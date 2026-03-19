@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { SafeAreaView, Text, Pressable, View } from 'react-native';
+import { Image, SafeAreaView, Text, Pressable, View } from 'react-native';
 import type { Profile, Shift, ShiftBreak, Site } from '@fieldops/shared';
 import { endShiftBreak, getTrackingDiagnostics, prepareShiftTrackingPermissions, startShiftBreak, startShiftTracking, stopShiftTracking } from '../lib/location';
 import { supabase } from '../lib/supabase';
@@ -46,7 +46,7 @@ export default function WorkerScreen() {
         { data: activeBreak, error: breakError },
         { data: sites, error: sitesError }
       ] = await Promise.all([
-        supabase.from('profiles').select('id, full_name, role, is_active').eq('id', userId).single(),
+        supabase.from('profiles').select('*').eq('id', userId).single(),
         supabase
           .from('shifts')
           .select('id, user_id, site_id, status, started_at, ended_at, tracking_mode')
@@ -109,7 +109,7 @@ export default function WorkerScreen() {
         profile: profile
           ? {
               id: profile.id,
-              fullName: profile.full_name,
+              fullName: profile.full_name?.trim() || profile.email?.trim() || 'Employee',
               role: profile.role,
               isActive: profile.is_active
             }
@@ -207,25 +207,28 @@ export default function WorkerScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a', padding: 20, gap: 18 }}>
-      <Text style={{ color: 'white', fontSize: 24, fontWeight: '700' }}>Employee shift console</Text>
-      <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 8 }}>
-        <Text style={{ color: '#e5e7eb' }}>Signed in as: {state.profile?.fullName ?? 'Unknown employee'}</Text>
-        <Text style={{ color: '#e5e7eb' }}>Role: {state.profile?.role ?? 'worker'}</Text>
-        <Text style={{ color: '#e5e7eb' }}>Shift status: {state.activeShift?.status ?? 'inactive'}</Text>
-        <Text style={{ color: '#e5e7eb' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f8fb', padding: 20, gap: 18 }}>
+      <View style={{ alignItems: 'center', gap: 12 }}>
+        <Image source={require('../assets/xeems-logo.png')} style={{ width: 240, height: 76 }} resizeMode="contain" />
+        <Text style={{ color: '#10233d', fontSize: 24, fontWeight: '700' }}>Employee shift console</Text>
+      </View>
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 16, gap: 8, borderWidth: 1, borderColor: '#d6e2ec' }}>
+        <Text style={{ color: '#10233d' }}>Signed in as: {state.profile?.fullName ?? 'Unknown employee'}</Text>
+        <Text style={{ color: '#10233d' }}>Role: {state.profile?.role ?? 'worker'}</Text>
+        <Text style={{ color: '#10233d' }}>Shift status: {state.activeShift?.status ?? 'inactive'}</Text>
+        <Text style={{ color: '#10233d' }}>
           Break status: {state.activeBreak ? `${state.activeBreak.breakType} since ${new Date(state.activeBreak.startedAt).toLocaleTimeString()}` : 'none'}
         </Text>
-        <Text style={{ color: '#e5e7eb' }}>Tracking status: {state.status}</Text>
-        <Text style={{ color: '#e5e7eb' }}>Device tracking mode: {state.trackingModeLabel}</Text>
-        <Text style={{ color: '#93c5fd' }}>
+        <Text style={{ color: '#10233d' }}>Tracking status: {state.status}</Text>
+        <Text style={{ color: '#10233d' }}>Device tracking mode: {state.trackingModeLabel}</Text>
+        <Text style={{ color: '#355372' }}>
           This company phone uses XEEMS under written notification. GPS collection still stays limited to active shifts. Aruba sites default to America/Aruba where no site timezone is set.
         </Text>
       </View>
-      <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 10 }}>
-        <Text style={{ color: 'white', fontWeight: '700' }}>Shift site</Text>
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 16, gap: 10, borderWidth: 1, borderColor: '#d6e2ec' }}>
+        <Text style={{ color: '#10233d', fontWeight: '700' }}>Shift site</Text>
         {state.sites.length === 0 ? (
-          <Text style={{ color: '#d1d5db' }}>No active sites loaded yet.</Text>
+          <Text style={{ color: '#5f7288' }}>No active sites loaded yet.</Text>
         ) : (
           state.sites.map((site) => {
             const isSelected = state.selectedSiteId === site.id;
@@ -235,39 +238,39 @@ export default function WorkerScreen() {
                 onPress={() => setState((current) => ({ ...current, selectedSiteId: site.id }))}
                 style={{
                   borderWidth: 1,
-                  borderColor: isSelected ? '#38bdf8' : '#334155',
+                  borderColor: isSelected ? '#1d62d1' : '#c6d5e3',
                   borderRadius: 12,
                   padding: 12,
-                  backgroundColor: isSelected ? '#082f49' : '#0f172a'
+                  backgroundColor: isSelected ? '#e8f1ff' : '#f9fbfd'
                 }}
               >
-                <Text style={{ color: 'white', fontWeight: '700' }}>{site.name}</Text>
-                <Text style={{ color: '#cbd5e1' }}>{site.clientName ?? 'Unassigned client'}</Text>
-                <Text style={{ color: '#94a3b8' }}>
+                <Text style={{ color: '#10233d', fontWeight: '700' }}>{site.name}</Text>
+                <Text style={{ color: '#355372' }}>{site.clientName ?? 'Unassigned client'}</Text>
+                <Text style={{ color: '#5f7288' }}>
                   {site.address?.line1 ?? 'Address missing'} {site.address?.city ? `, ${site.address.city}` : ''}
                 </Text>
-                <Text style={{ color: '#94a3b8' }}>{site.radiusMeters}m geofence</Text>
+                <Text style={{ color: '#5f7288' }}>{site.radiusMeters}m geofence</Text>
               </Pressable>
             );
           })
         )}
       </View>
       <View style={{ gap: 12 }}>
-        <Pressable onPress={handleStartShift} disabled={state.loading || !!state.activeShift || !state.selectedSiteId} style={{ backgroundColor: '#0ea5e9', padding: 16, borderRadius: 12, opacity: state.loading || !!state.activeShift || !state.selectedSiteId ? 0.6 : 1 }}>
-          <Text style={{ color: '#082f49', fontWeight: '700', textAlign: 'center' }}>Start shift tracking</Text>
+        <Pressable onPress={handleStartShift} disabled={state.loading || !!state.activeShift || !state.selectedSiteId} style={{ backgroundColor: '#1d62d1', padding: 16, borderRadius: 14, opacity: state.loading || !!state.activeShift || !state.selectedSiteId ? 0.6 : 1 }}>
+          <Text style={{ color: '#ffffff', fontWeight: '700', textAlign: 'center' }}>Start shift tracking</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <Pressable
             onPress={() => handleStartBreak('lunch')}
             disabled={state.loading || !state.activeShift || !!state.activeBreak}
-            style={{ flex: 1, backgroundColor: '#fde68a', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
+            style={{ flex: 1, backgroundColor: '#fff0bf', padding: 16, borderRadius: 14, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
           >
             <Text style={{ color: '#78350f', fontWeight: '700', textAlign: 'center' }}>Start lunch break</Text>
           </Pressable>
           <Pressable
             onPress={() => handleStartBreak('pause')}
             disabled={state.loading || !state.activeShift || !!state.activeBreak}
-            style={{ flex: 1, backgroundColor: '#fdba74', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
+            style={{ flex: 1, backgroundColor: '#ffd6b0', padding: 16, borderRadius: 14, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}
           >
             <Text style={{ color: '#7c2d12', fontWeight: '700', textAlign: 'center' }}>Start pause</Text>
           </Pressable>
@@ -275,17 +278,17 @@ export default function WorkerScreen() {
         <Pressable
           onPress={handleEndBreak}
           disabled={state.loading || !state.activeBreak}
-          style={{ backgroundColor: '#86efac', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeBreak ? 0.6 : 1 }}
+          style={{ backgroundColor: '#c9f1d8', padding: 16, borderRadius: 14, opacity: state.loading || !state.activeBreak ? 0.6 : 1 }}
         >
           <Text style={{ color: '#14532d', fontWeight: '700', textAlign: 'center' }}>End current break</Text>
         </Pressable>
-        <Pressable onPress={handleEndShift} disabled={state.loading || !state.activeShift || !!state.activeBreak} style={{ backgroundColor: '#fca5a5', padding: 16, borderRadius: 12, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}>
+        <Pressable onPress={handleEndShift} disabled={state.loading || !state.activeShift || !!state.activeBreak} style={{ backgroundColor: '#ffd0d0', padding: 16, borderRadius: 14, opacity: state.loading || !state.activeShift || !!state.activeBreak ? 0.6 : 1 }}>
           <Text style={{ color: '#7f1d1d', fontWeight: '700', textAlign: 'center' }}>End shift and stop tracking</Text>
         </Pressable>
       </View>
-      <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, gap: 8 }}>
-        <Text style={{ color: 'white', fontWeight: '700' }}>XEEMS notice</Text>
-        <Text style={{ color: '#d1d5db' }}>
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 16, gap: 8, borderWidth: 1, borderColor: '#d6e2ec' }}>
+        <Text style={{ color: '#10233d', fontWeight: '700' }}>XEEMS notice</Text>
+        <Text style={{ color: '#4b5f75' }}>
           Your employer provides written XEEMS notification for company-issued devices. In-app consent capture is not required for this deployment.
         </Text>
       </View>

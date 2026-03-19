@@ -65,7 +65,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "assets/XEEMS_ICON.ico"
+      "icon": "assets/XEEMS_ICON.png"
     },
     "asar": true,
     "asarUnpack": [],

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 export default function SignInScreen() {
@@ -26,7 +26,7 @@ export default function SignInScreen() {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role, full_name')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
 
@@ -40,7 +40,8 @@ export default function SignInScreen() {
         return;
       }
 
-      setStatus(`Welcome ${profile?.full_name ?? 'employee'}. Loading your shift console...`);
+      const name = profile?.full_name?.trim() || profile?.email?.trim() || 'employee';
+      setStatus(`Welcome ${name}. Loading your shift console...`);
       router.replace('/worker');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Unable to sign in.');
@@ -50,41 +51,44 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#08111f', padding: 24, gap: 16 }}>
-      <Text style={{ color: 'white', fontSize: 26, fontWeight: '700' }}>Employee sign in</Text>
-      <Text style={{ color: '#cbd5e1' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f8fb', padding: 24, gap: 18 }}>
+      <View style={{ alignItems: 'center', paddingTop: 8 }}>
+        <Image source={require('../assets/xeems-logo.png')} style={{ width: 280, height: 88 }} resizeMode="contain" />
+      </View>
+      <Text style={{ color: '#10233d', fontSize: 26, fontWeight: '700' }}>Employee sign in</Text>
+      <Text style={{ color: '#4b5f75' }}>
         Mobile access is for employees on shift. Owner/admin access is intentionally separated into the web dashboard.
       </Text>
       <View style={{ gap: 8 }}>
-        <Text style={{ color: '#e2e8f0' }}>Email</Text>
+        <Text style={{ color: '#355372' }}>Email</Text>
         <TextInput
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
           placeholder="employee@company.com"
-          placeholderTextColor="#64748b"
-          style={{ backgroundColor: '#111827', color: 'white', padding: 14, borderRadius: 12 }}
+          placeholderTextColor="#7b8da1"
+          style={{ backgroundColor: '#ffffff', color: '#10233d', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#c6d5e3' }}
         />
       </View>
       <View style={{ gap: 8 }}>
-        <Text style={{ color: '#e2e8f0' }}>Password</Text>
+        <Text style={{ color: '#355372' }}>Password</Text>
         <TextInput
           secureTextEntry
           value={password}
           onChangeText={setPassword}
           placeholder="Temporary password"
-          placeholderTextColor="#64748b"
-          style={{ backgroundColor: '#111827', color: 'white', padding: 14, borderRadius: 12 }}
+          placeholderTextColor="#7b8da1"
+          style={{ backgroundColor: '#ffffff', color: '#10233d', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#c6d5e3' }}
         />
       </View>
-      <Pressable onPress={handleSignIn} disabled={loading} style={{ backgroundColor: '#38bdf8', padding: 16, borderRadius: 12, opacity: loading ? 0.7 : 1 }}>
-        <Text style={{ color: '#082f49', textAlign: 'center', fontWeight: '700' }}>{loading ? 'Signing in...' : 'Continue as employee'}</Text>
+      <Pressable onPress={handleSignIn} disabled={loading} style={{ backgroundColor: '#1d62d1', padding: 16, borderRadius: 14, opacity: loading ? 0.7 : 1 }}>
+        <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '700' }}>{loading ? 'Signing in...' : 'Continue as employee'}</Text>
       </Pressable>
-      <View style={{ backgroundColor: '#111827', padding: 16, borderRadius: 12, gap: 6 }}>
-        <Text style={{ color: '#7dd3fc', fontWeight: '700' }}>XEEMS mobile</Text>
-        <Text style={{ color: '#cbd5e1' }}>Use this app to start and end shifts, lunch breaks, and pause tracking on the company phone.</Text>
-        <Text style={{ color: '#cbd5e1' }}>{status}</Text>
+      <View style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 16, gap: 6, borderWidth: 1, borderColor: '#d6e2ec' }}>
+        <Text style={{ color: '#f97316', fontWeight: '700' }}>XEEMS mobile</Text>
+        <Text style={{ color: '#4b5f75' }}>Use this app to start and end shifts, lunch breaks, and pause tracking on the company phone.</Text>
+        <Text style={{ color: '#355372' }}>{status}</Text>
       </View>
     </SafeAreaView>
   );

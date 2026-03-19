@@ -8,12 +8,14 @@
     "dev:web": "pnpm --filter fieldops-web dev",
     "dev:desktop": "pnpm --filter xeems-desktop dev",
     "dev:mobile": "pnpm --filter @fieldops/mobile dev",
+    "setup:xeems": "node scripts/bootstrap-xeems.mjs",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "postinstall": "node scripts/link-web-react.cjs"
   },
   "devDependencies": {
+    "pg": "^8.20.0",
     "turbo": "^2.0.14",
     "typescript": "^5.6.2"
   }

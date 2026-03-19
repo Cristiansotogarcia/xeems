@@ -10,7 +10,7 @@ import { IdleEvent } from './idleDetector';
 interface WorkerProfileRow {
   id: string;
   email: string | null;
-  full_name: string;
+  full_name?: string | null;
   role: 'worker' | 'admin';
   is_active: boolean;
 }
@@ -165,6 +165,20 @@ const defaultCategoryRules: CategoryRule[] = [
   { pattern: 'utorrent', category: 'restricted' },
   { pattern: 'spotify', category: 'restricted' }
 ];
+
+function getProfileName(profile: WorkerProfileRow | null | undefined) {
+  const fullName = profile?.full_name?.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  const email = profile?.email?.trim();
+  if (email) {
+    return email;
+  }
+
+  return 'Employee';
+}
 
 export class SyncService {
   private supabase: SupabaseClient<DesktopDatabase> | null = null;
@@ -330,7 +344,7 @@ export class SyncService {
           enrolled: false,
           monitoringAllowed: false,
           userId: profile.id,
-          userName: profile.full_name,
+          userName: getProfileName(profile),
           userEmail: profile.email,
           deviceId: null,
           lastSeenAt: null,
@@ -347,7 +361,7 @@ export class SyncService {
           enrolled: false,
           monitoringAllowed: false,
           userId: profile.id,
-          userName: profile.full_name,
+          userName: getProfileName(profile),
           userEmail: profile.email,
           deviceId: null,
           lastSeenAt: null,
@@ -366,7 +380,7 @@ export class SyncService {
         enrolled: true,
         monitoringAllowed,
         userId: profile.id,
-        userName: profile.full_name,
+        userName: getProfileName(profile),
         userEmail: profile.email,
         deviceId: device.id,
         deviceName: device.device_name ?? os.hostname(),
@@ -559,7 +573,7 @@ export class SyncService {
 
     const { data, error } = await this.supabase
       .from('profiles')
-      .select('id, email, full_name, role, is_active')
+      .select('*')
       .eq('id', userId)
       .single();
 

@@ -57,7 +57,7 @@ interface DashboardState {
 interface ActiveShiftRow {
   id: string;
   started_at: string | null;
-  profiles: Array<{ full_name: string | null }> | null;
+  profiles: Array<{ full_name?: string | null; email?: string | null }> | null;
   sites: Array<{ name: string | null }> | null;
 }
 
@@ -65,7 +65,7 @@ interface EventRow {
   id: string;
   event_at: string;
   event_type: string;
-  profiles: Array<{ full_name: string | null }> | null;
+  profiles: Array<{ full_name?: string | null; email?: string | null }> | null;
   sites: Array<{ name: string | null }> | null;
 }
 
@@ -88,7 +88,7 @@ interface SiteRow {
 interface EmployeeRow {
   id: string;
   email: string | null;
-  full_name: string;
+  full_name?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -103,7 +103,7 @@ interface DesktopDeviceRow {
   enrollment_status: string;
   monitoring_enabled: boolean;
   last_seen_at: string;
-  profiles: Array<{ full_name: string | null; email: string | null }> | null;
+  profiles: Array<{ full_name?: string | null; email?: string | null }> | null;
 }
 
 interface DesktopActivityRow {
@@ -113,7 +113,7 @@ interface DesktopActivityRow {
   window_title: string | null;
   is_productive: boolean | null;
   metadata: { category?: string } | null;
-  profiles: Array<{ full_name: string | null }> | null;
+  profiles: Array<{ full_name?: string | null; email?: string | null }> | null;
   desktop_devices: Array<{ device_name: string | null }> | null;
 }
 
@@ -122,13 +122,27 @@ function formatTimestamp(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
+function getProfileLabel(profile: { full_name?: string | null; email?: string | null } | null | undefined) {
+  const fullName = profile?.full_name?.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  const email = profile?.email?.trim();
+  if (email) {
+    return email;
+  }
+
+  return 'Unknown employee';
+}
+
 const REFRESH_INTERVAL_MS = 30000;
 
 const downloadTargets = [
   {
     name: 'Windows desktop',
     description: 'Managed XEEMS installer (.exe) for company laptops.',
-    url: process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? '',
+    url: process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? '/api/downloads/desktop',
     cta: 'Download desktop app'
   },
   {
@@ -149,40 +163,47 @@ function LandingPage() {
   const router = useRouter();
 
   return (
-    <main style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, #12233d 0%, #09121f 45%, #050913 100%)', padding: '48px 20px' }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at top, rgba(14,165,233,0.12) 0%, rgba(249,250,251,0) 38%), linear-gradient(180deg, #f9fbfd 0%, #edf4fa 100%)',
+        padding: '48px 20px'
+      }}
+    >
       <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 28 }}>
         <section style={{ textAlign: 'center', display: 'grid', gap: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(520px, 86vw)', height: 'auto', filter: 'drop-shadow(0 24px 60px rgba(37,99,235,0.24))' }} />
+            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(620px, 90vw)', height: 'auto', filter: 'drop-shadow(0 26px 50px rgba(16,35,61,0.12))' }} />
           </div>
           <div>
             <div style={{ color: '#f59e0b', fontSize: 13, letterSpacing: '0.28em', textTransform: 'uppercase', marginBottom: 12 }}>XEEMS Control Plane</div>
-            <h1 style={{ margin: 0, fontSize: 58, lineHeight: 1, letterSpacing: '-0.04em' }}>Company-owned device monitoring</h1>
+            <h1 style={{ margin: 0, fontSize: 58, lineHeight: 1, letterSpacing: '-0.04em', color: '#10233d' }}>Company-owned device monitoring</h1>
           </div>
-          <p style={{ color: '#cbd5e1', fontSize: 18, maxWidth: 700, margin: '0 auto', lineHeight: 1.7 }}>
+          <p style={{ color: '#4b5f75', fontSize: 18, maxWidth: 720, margin: '0 auto', lineHeight: 1.7 }}>
             XEEMS provisions employee accounts from the admin dashboard, enrolls Windows laptops once, and keeps the desktop agent running
             on company-owned devices. Mobile remains the field shift and GPS companion.
           </p>
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-          <div style={{ padding: 28, borderRadius: 24, background: 'rgba(15, 23, 42, 0.84)', border: '1px solid rgba(249,115,22,0.24)' }}>
-            <h2 style={{ marginTop: 0 }}>Admin Dashboard</h2>
-            <p style={{ color: '#cbd5e1', lineHeight: 1.7 }}>
+          <div style={{ padding: 28, borderRadius: 28, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(249,115,22,0.22)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+            <h2 style={{ marginTop: 0, color: '#10233d' }}>Admin Dashboard</h2>
+            <p style={{ color: '#4b5f75', lineHeight: 1.7 }}>
               Admins sign in here, create employee accounts, reset passwords, disable users, and manage desktop devices from one place.
             </p>
-            <div style={{ color: '#93c5fd', fontSize: 14, lineHeight: 1.7 }}>If you run `npm run dev` from the repo root, this web portal is the page you should use first.</div>
+            <div style={{ color: '#355372', fontSize: 14, lineHeight: 1.7 }}>If you run `npm run dev` from the repo root, this web portal is the page you should use first.</div>
             <button
               onClick={() => router.push('/login')}
-              style={{ marginTop: 18, padding: '14px 18px', borderRadius: 14, border: 0, background: '#f97316', color: '#111827', fontWeight: 700, cursor: 'pointer' }}
+              style={{ marginTop: 18, padding: '14px 18px', borderRadius: 14, border: 0, background: '#f97316', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
             >
               Open admin login
             </button>
           </div>
 
-          <div style={{ padding: 28, borderRadius: 24, background: 'rgba(15, 23, 42, 0.84)', border: '1px solid rgba(37,99,235,0.28)' }}>
-            <h2 style={{ marginTop: 0 }}>Deployment posture</h2>
-            <ul style={{ color: '#cbd5e1', paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
+          <div style={{ padding: 28, borderRadius: 28, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(29,98,209,0.2)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+            <h2 style={{ marginTop: 0, color: '#10233d' }}>Deployment posture</h2>
+            <ul style={{ color: '#4b5f75', paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
               <li>Windows desktop agent persists after first login.</li>
               <li>Employees cannot stop monitoring from the app UI.</li>
               <li>Written XEEMS notification replaces in-app consent capture.</li>
@@ -192,17 +213,17 @@ function LandingPage() {
 
         <section style={{ display: 'grid', gap: 18 }}>
           <div style={{ display: 'grid', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>Employee app downloads</h2>
-            <p style={{ color: '#cbd5e1', margin: 0, lineHeight: 1.7 }}>
+            <h2 style={{ margin: 0, color: '#10233d' }}>Employee app downloads</h2>
+            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>
               Employees use this portal to install XEEMS on company devices. Publish the Windows installer and mobile install links, then set the public download URLs in the web environment.
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
             {downloadTargets.map((target) => (
-              <div key={target.name} style={{ padding: 24, borderRadius: 22, background: 'rgba(15, 23, 42, 0.84)', border: '1px solid rgba(148, 163, 184, 0.16)', display: 'grid', gap: 14 }}>
+              <div key={target.name} style={{ padding: 24, borderRadius: 24, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(148,163,184,0.18)', display: 'grid', gap: 14, boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
                 <div>
-                  <div style={{ color: '#93c5fd', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{target.name}</div>
-                  <p style={{ color: '#cbd5e1', margin: 0, lineHeight: 1.7 }}>{target.description}</p>
+                  <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{target.name}</div>
+                  <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>{target.description}</p>
                 </div>
                 {target.url ? (
                   <a
@@ -213,7 +234,7 @@ function LandingPage() {
                       alignItems: 'center',
                       padding: '14px 16px',
                       borderRadius: 14,
-                      background: '#2563eb',
+                      background: '#1d62d1',
                       color: '#fff',
                       fontWeight: 700
                     }}
@@ -221,14 +242,14 @@ function LandingPage() {
                     {target.cta}
                   </a>
                 ) : (
-                  <div style={{ padding: '14px 16px', borderRadius: 14, background: '#1e293b', color: '#94a3b8', fontWeight: 600 }}>
+                  <div style={{ padding: '14px 16px', borderRadius: 14, background: '#eef4fa', color: '#5f7288', fontWeight: 600 }}>
                     Download link not configured yet
                   </div>
                 )}
               </div>
             ))}
           </div>
-          <div style={{ padding: 20, borderRadius: 20, background: 'rgba(2, 6, 23, 0.72)', border: '1px solid rgba(148, 163, 184, 0.12)', color: '#cbd5e1', lineHeight: 1.7 }}>
+          <div style={{ padding: 20, borderRadius: 22, background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(148,163,184,0.18)', color: '#4b5f75', lineHeight: 1.7, boxShadow: '0 20px 40px rgba(16,35,61,0.06)' }}>
             Deployment note: the Windows card should point to the XEEMS installer `.exe`, while the Android and iPhone cards should point to the phone install links you publish for employees.
           </div>
         </section>
@@ -253,17 +274,17 @@ function SiteMap({ sites }: { sites: DashboardState['sites'] }) {
   }, [sites]);
 
   return (
-    <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, minHeight: 380, display: 'grid', gap: 12, border: '1px solid rgba(148, 163, 184, 0.12)' }}>
+    <div style={{ background: 'rgba(255, 255, 255, 0.94)', borderRadius: 24, padding: 22, minHeight: 380, display: 'grid', gap: 12, border: '1px solid rgba(148, 163, 184, 0.18)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
       <div>
         <h2 style={{ marginTop: 0 }}>Field site map</h2>
-        <p style={{ color: '#94a3b8', marginBottom: 0 }}>
+        <p style={{ color: '#5f7288', marginBottom: 0 }}>
           Active mobile work sites stay visible here while desktop devices are managed separately as company-owned endpoints.
         </p>
       </div>
-      <div style={{ position: 'relative', borderRadius: 20, minHeight: 260, background: 'linear-gradient(180deg, #082032 0%, #0f172a 100%)', border: '1px solid #1e293b', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', borderRadius: 20, minHeight: 260, background: 'linear-gradient(180deg, #f4f8fb 0%, #dde9f4 100%)', border: '1px solid #d5e2ee', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(148,163,184,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.1) 1px, transparent 1px)', backgroundSize: '38px 38px' }} />
         {sites.length === 0 ? (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#cbd5e1' }}>No active client sites yet.</div>
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#355372' }}>No active client sites yet.</div>
         ) : (
           sites.map((site) => {
             const latRange = (bounds?.maxLat ?? 0) - (bounds?.minLat ?? 0) || 0.05;
@@ -274,9 +295,9 @@ function SiteMap({ sites }: { sites: DashboardState['sites'] }) {
             return (
               <div key={site.id} style={{ position: 'absolute', top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)', maxWidth: 180 }}>
                 <div style={{ width: 14, height: 14, borderRadius: 999, background: '#f97316', border: '3px solid rgba(253,186,116,0.55)', boxShadow: '0 0 0 6px rgba(249,115,22,0.18)' }} />
-                <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 12, background: 'rgba(2, 6, 23, 0.92)', border: '1px solid #1e293b' }}>
+                <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 12, background: 'rgba(255, 255, 255, 0.96)', border: '1px solid #d5e2ee', boxShadow: '0 12px 24px rgba(16,35,61,0.08)' }}>
                   <div style={{ fontWeight: 700 }}>{site.name}</div>
-                  <div style={{ color: '#93c5fd', fontSize: 13 }}>{site.clientName ?? 'Client TBD'}</div>
+                  <div style={{ color: '#355372', fontSize: 13 }}>{site.clientName ?? 'Client TBD'}</div>
                 </div>
               </div>
             );
@@ -346,7 +367,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     if (profile?.role !== 'admin' || profile?.is_active !== true) {
       await supabase.auth.signOut();
       setIsAuthenticated(false);
@@ -369,7 +390,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('id, full_name, role, is_active').eq('id', user.id).single();
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
       if (profileError) {
         throw profileError;
@@ -391,12 +412,12 @@ export default function DashboardPage() {
       ] = await Promise.all([
         supabase
           .from('shifts')
-          .select('id, started_at, profiles:profiles!shifts_user_id_fkey(full_name), sites(name)')
+          .select('id, started_at, profiles:profiles!shifts_user_id_fkey(*), sites(name)')
           .eq('status', 'active')
           .order('started_at', { ascending: false }),
         supabase
           .from('geofence_events')
-          .select('id, event_at, event_type, profiles:profiles!geofence_events_user_id_fkey(full_name), sites(name)')
+          .select('id, event_at, event_type, profiles:profiles!geofence_events_user_id_fkey(*), sites(name)')
           .order('event_at', { ascending: false })
           .limit(10),
         supabase
@@ -406,16 +427,16 @@ export default function DashboardPage() {
           .order('name'),
         supabase
           .from('profiles')
-          .select('id, email, full_name, is_active, created_at')
+          .select('*')
           .eq('role', 'worker')
           .order('created_at', { ascending: false }),
         supabase
           .from('desktop_devices')
-          .select('id, user_id, device_uuid, device_name, os_username, app_version, enrollment_status, monitoring_enabled, last_seen_at, profiles:profiles!desktop_devices_user_id_fkey(full_name, email)')
+          .select('id, user_id, device_uuid, device_name, os_username, app_version, enrollment_status, monitoring_enabled, last_seen_at, profiles:profiles!desktop_devices_user_id_fkey(*)')
           .order('last_seen_at', { ascending: false }),
         supabase
           .from('activity_logs')
-          .select('id, timestamp, app_name, window_title, is_productive, metadata, profiles:profiles!activity_logs_user_id_fkey(full_name), desktop_devices:desktop_devices!activity_logs_device_id_fkey(device_name)')
+          .select('id, timestamp, app_name, window_title, is_productive, metadata, profiles:profiles!activity_logs_user_id_fkey(*), desktop_devices:desktop_devices!activity_logs_device_id_fkey(device_name)')
           .eq('device_type', 'laptop')
           .order('timestamp', { ascending: false })
           .limit(20)
@@ -429,17 +450,17 @@ export default function DashboardPage() {
         ...current,
         loading: false,
         error: null,
-        adminName: profile.full_name,
+        adminName: getProfileLabel(profile),
         activeShifts: ((activeShifts ?? []) as unknown as ActiveShiftRow[]).map((shift) => ({
           id: shift.id,
-          workerName: shift.profiles?.[0]?.full_name ?? 'Unknown employee',
+          workerName: getProfileLabel(shift.profiles?.[0]),
           siteName: shift.sites?.[0]?.name ?? 'Unassigned site',
           startedAt: shift.started_at ?? 'n/a'
         })),
         recentEvents: ((recentEvents ?? []) as unknown as EventRow[]).map((event) => ({
           id: event.id,
           at: event.event_at,
-          label: `${event.profiles?.[0]?.full_name ?? 'Unknown employee'} ${event.event_type} ${event.sites?.[0]?.name ?? 'site'}`
+          label: `${getProfileLabel(event.profiles?.[0])} ${event.event_type} ${event.sites?.[0]?.name ?? 'site'}`
         })),
         sites: ((sites ?? []) as SiteRow[]).map((site) => ({
           id: site.id,
@@ -462,14 +483,14 @@ export default function DashboardPage() {
         employees: ((employees ?? []) as EmployeeRow[]).map((employee) => ({
           id: employee.id,
           email: employee.email,
-          fullName: employee.full_name,
+          fullName: employee.full_name?.trim() || employee.email || 'Employee',
           isActive: employee.is_active,
           createdAt: employee.created_at
         })),
         desktopDevices: ((desktopDevices ?? []) as unknown as DesktopDeviceRow[]).map((device) => ({
           id: device.id,
           userId: device.user_id,
-          workerName: device.profiles?.[0]?.full_name ?? 'Unknown employee',
+          workerName: getProfileLabel(device.profiles?.[0]),
           workerEmail: device.profiles?.[0]?.email ?? null,
           deviceUuid: device.device_uuid,
           deviceName: device.device_name,
@@ -482,7 +503,7 @@ export default function DashboardPage() {
         desktopActivity: ((desktopActivity ?? []) as unknown as DesktopActivityRow[]).map((entry) => ({
           id: entry.id,
           at: entry.timestamp,
-          workerName: entry.profiles?.[0]?.full_name ?? 'Unknown employee',
+          workerName: getProfileLabel(entry.profiles?.[0]),
           deviceName: entry.desktop_devices?.[0]?.device_name ?? 'Company laptop',
           appName: entry.app_name ?? 'Unknown app',
           windowTitle: entry.window_title ?? 'No window title',
@@ -604,33 +625,42 @@ export default function DashboardPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', padding: 28, background: 'linear-gradient(180deg, #060b13 0%, #0b1220 100%)', display: 'grid', gap: 18 }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        padding: 28,
+        background:
+          'radial-gradient(circle at top, rgba(14,165,233,0.12) 0%, rgba(249,250,251,0) 36%), linear-gradient(180deg, #f9fbfd 0%, #edf4fa 100%)',
+        display: 'grid',
+        gap: 18
+      }}
+    >
       <section style={{ display: 'grid', gap: 10 }}>
         <div style={{ color: '#f59e0b', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>XEEMS Admin</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'start', flexWrap: 'wrap' }}>
           <div style={{ display: 'grid', gap: 10, maxWidth: 860 }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 220, maxWidth: '60vw', height: 'auto' }} />
-            <h1 style={{ margin: 0, fontSize: 42, letterSpacing: '-0.04em' }}>Managed device operations</h1>
-            <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.7 }}>
+            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 320, maxWidth: '72vw', height: 'auto' }} />
+            <h1 style={{ margin: 0, fontSize: 42, letterSpacing: '-0.04em', color: '#10233d' }}>Managed device operations</h1>
+            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>
               Company-owned XEEMS devices run under written notification, not user-driven consent. Admins provision employee accounts,
               issue credentials, and remotely disable laptops when monitoring should stop.
             </p>
-            <div style={{ color: '#cbd5e1' }}>Signed in as: {state.adminName || '...'}</div>
+            <div style={{ color: '#355372' }}>Signed in as: {state.adminName || '...'}</div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => void loadDashboard()} style={{ padding: '12px 16px', borderRadius: 14, border: 0, background: '#2563eb', color: 'white', cursor: 'pointer', fontWeight: 700 }}>
+            <button onClick={() => void loadDashboard()} style={{ padding: '12px 16px', borderRadius: 14, border: 0, background: '#1d62d1', color: 'white', cursor: 'pointer', fontWeight: 700 }}>
               Refresh
             </button>
-            <button onClick={() => void handleSignOut()} style={{ padding: '12px 16px', borderRadius: 14, border: '1px solid #334155', background: '#020617', color: 'white', cursor: 'pointer' }}>
+            <button onClick={() => void handleSignOut()} style={{ padding: '12px 16px', borderRadius: 14, border: '1px solid #c6d5e3', background: '#ffffff', color: '#10233d', cursor: 'pointer' }}>
               Sign out
             </button>
           </div>
         </div>
-        <div style={{ borderRadius: 18, padding: 16, background: 'rgba(249, 115, 22, 0.12)', border: '1px solid rgba(249,115,22,0.2)', color: '#fed7aa' }}>
+        <div style={{ borderRadius: 18, padding: 16, background: 'rgba(249, 115, 22, 0.09)', border: '1px solid rgba(249,115,22,0.18)', color: '#9a3412' }}>
           Employees should receive written XEEMS notification outside the app. Desktop laptops are managed endpoints and the desktop agent should remain active after enrollment.
         </div>
         {state.lastIssuedPassword ? (
-          <div style={{ borderRadius: 18, padding: 16, background: 'rgba(37, 99, 235, 0.14)', border: '1px solid rgba(59,130,246,0.25)', color: '#dbeafe' }}>
+          <div style={{ borderRadius: 18, padding: 16, background: 'rgba(29, 98, 209, 0.08)', border: '1px solid rgba(29,98,209,0.18)', color: '#183857' }}>
             Latest temporary password: <strong>{state.lastIssuedPassword}</strong>
           </div>
         ) : null}
@@ -639,18 +669,18 @@ export default function DashboardPage() {
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
         {stats.map(([label, value]) => (
-          <div key={label} style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 20, padding: 18, border: '1px solid rgba(148,163,184,0.12)' }}>
-            <div style={{ color: '#94a3b8', fontSize: 13 }}>{label}</div>
+          <div key={label} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 20, padding: 18, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
+            <div style={{ color: '#5f7288', fontSize: 13 }}>{label}</div>
             <div style={{ fontSize: 34, fontWeight: 800, marginTop: 8 }}>{state.loading ? '...' : value}</div>
           </div>
         ))}
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 16 }}>
-        <form onSubmit={handleCreateEmployee} style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, display: 'grid', gap: 14, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <form onSubmit={handleCreateEmployee} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 14, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <div>
             <h2 style={{ marginTop: 0, marginBottom: 6 }}>Provision employee account</h2>
-            <p style={{ margin: 0, color: '#94a3b8' }}>
+            <p style={{ margin: 0, color: '#5f7288' }}>
               Create a worker account, issue a temporary password, and let the user enroll the laptop once.
             </p>
           </div>
@@ -658,28 +688,28 @@ export default function DashboardPage() {
             value={form.fullName}
             onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
             placeholder="Employee full name"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #334155', background: '#020617', color: '#e2e8f0' }}
+            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
           />
           <input
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             placeholder="employee@company.com"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #334155', background: '#020617', color: '#e2e8f0' }}
+            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
           />
           <input
             value={form.password}
             onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
             placeholder="Temporary password"
-            style={{ padding: 14, borderRadius: 14, border: '1px solid #334155', background: '#020617', color: '#e2e8f0' }}
+            style={{ padding: 14, borderRadius: 14, border: '1px solid #c6d5e3', background: '#f9fbfd', color: '#10233d' }}
           />
-          <button disabled={isSubmitting} style={{ padding: 14, borderRadius: 14, border: 0, background: '#f97316', color: '#111827', fontWeight: 800, cursor: 'pointer', opacity: isSubmitting ? 0.75 : 1 }}>
+          <button disabled={isSubmitting} style={{ padding: 14, borderRadius: 14, border: 0, background: '#f97316', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: isSubmitting ? 0.75 : 1 }}>
             {isSubmitting ? 'Creating employee...' : 'Create employee'}
           </button>
         </form>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, display: 'grid', gap: 12, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 12, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0, marginBottom: 6 }}>Desktop rollout checklist</h2>
-          <div style={{ color: '#cbd5e1', lineHeight: 1.8 }}>
+          <div style={{ color: '#355372', lineHeight: 1.8 }}>
             <div>1. Create employee account here.</div>
             <div>2. Give the temporary password to the employee.</div>
             <div>3. Employee signs into XEEMS Desktop once.</div>
@@ -690,16 +720,16 @@ export default function DashboardPage() {
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 16 }}>
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0 }}>Employee roster</h2>
           <div style={{ display: 'grid', gap: 12 }}>
-            {state.employees.length === 0 ? <div style={{ color: '#94a3b8' }}>No employees created yet.</div> : null}
+            {state.employees.length === 0 ? <div style={{ color: '#5f7288' }}>No employees created yet.</div> : null}
             {state.employees.map((employee) => (
-              <div key={employee.id} style={{ borderRadius: 18, padding: 16, background: '#0b1220', border: '1px solid #1e293b', display: 'grid', gap: 10 }}>
+              <div key={employee.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontWeight: 800 }}>{employee.fullName}</div>
-                    <div style={{ color: '#94a3b8' }}>{employee.email ?? 'No email stored'}</div>
+                    <div style={{ color: '#5f7288' }}>{employee.email ?? 'No email stored'}</div>
                   </div>
                   <div style={{ color: employee.isActive ? '#86efac' : '#fca5a5', fontWeight: 700 }}>
                     {employee.isActive ? 'Active' : 'Disabled'}
@@ -707,7 +737,7 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ color: '#64748b', fontSize: 13 }}>Created {formatTimestamp(employee.createdAt)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => void handleResetPassword(employee.id)} style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', cursor: 'pointer' }}>
+                  <button onClick={() => void handleResetPassword(employee.id)} style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid #c6d5e3', background: '#ffffff', color: '#10233d', cursor: 'pointer' }}>
                     Reset password
                   </button>
                   <button
@@ -729,27 +759,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0 }}>Desktop devices</h2>
-          <div style={{ color: '#94a3b8', marginBottom: 12 }}>Auto-refreshes every 30 seconds so admins can see device heartbeat and control state without asking the employee.</div>
+          <div style={{ color: '#5f7288', marginBottom: 12 }}>Auto-refreshes every 30 seconds so admins can see device heartbeat and control state without asking the employee.</div>
           <div style={{ display: 'grid', gap: 12 }}>
-            {state.desktopDevices.length === 0 ? <div style={{ color: '#94a3b8' }}>No enrolled laptops yet.</div> : null}
+            {state.desktopDevices.length === 0 ? <div style={{ color: '#5f7288' }}>No enrolled laptops yet.</div> : null}
             {state.desktopDevices.map((device) => (
-              <div key={device.id} style={{ borderRadius: 18, padding: 16, background: '#0b1220', border: '1px solid #1e293b', display: 'grid', gap: 10 }}>
+              <div key={device.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
                   <div>
                     <div style={{ fontWeight: 800 }}>{device.deviceName ?? 'Unnamed laptop'}</div>
-                    <div style={{ color: '#94a3b8', fontSize: 14 }}>{device.workerName} {device.workerEmail ? `| ${device.workerEmail}` : ''}</div>
+                    <div style={{ color: '#5f7288', fontSize: 14 }}>{device.workerName} {device.workerEmail ? `| ${device.workerEmail}` : ''}</div>
                   </div>
                   <div style={{ color: device.monitoringEnabled ? '#86efac' : '#fca5a5', fontWeight: 700 }}>
                     {device.monitoringEnabled ? 'Monitoring on' : 'Monitoring off'}
                   </div>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: 13 }}>OS user: {device.osUsername ?? 'n/a'} | App: {device.appVersion ?? 'n/a'}</div>
+                <div style={{ color: '#5f7288', fontSize: 13 }}>OS user: {device.osUsername ?? 'n/a'} | App: {device.appVersion ?? 'n/a'}</div>
                 <div style={{ color: '#64748b', fontSize: 13 }}>Last seen {formatTimestamp(device.lastSeenAt)}</div>
                 <div style={{ color: '#64748b', fontSize: 12, wordBreak: 'break-all' }}>{device.deviceUuid}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#cbd5e1', fontSize: 13 }}>Status: {device.enrollmentStatus}</div>
+                  <div style={{ color: '#355372', fontSize: 13 }}>Status: {device.enrollmentStatus}</div>
                   <button
                     onClick={() => void handleToggleDevice(device.id, !device.monitoringEnabled)}
                     style={{
@@ -771,23 +801,23 @@ export default function DashboardPage() {
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 16 }}>
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <div style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
             <h2 style={{ margin: 0 }}>Live desktop monitor</h2>
-            <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.7 }}>
+            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>
               Recent laptop activity from enrolled XEEMS desktop agents. This feed refreshes automatically every 30 seconds.
             </p>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
-            {state.desktopActivity.length === 0 ? <div style={{ color: '#94a3b8' }}>No desktop activity captured yet.</div> : null}
+            {state.desktopActivity.length === 0 ? <div style={{ color: '#5f7288' }}>No desktop activity captured yet.</div> : null}
             {state.desktopActivity.map((entry) => (
-              <div key={entry.id} style={{ borderRadius: 18, padding: 16, background: '#0b1220', border: '1px solid #1e293b', display: 'grid', gap: 8 }}>
+              <div key={entry.id} style={{ borderRadius: 18, padding: 16, background: '#f9fbfd', border: '1px solid #d5e2ee', display: 'grid', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 800 }}>{entry.appName}</div>
                   <div style={{ color: entry.isProductive ? '#86efac' : '#fbbf24', fontWeight: 700 }}>{entry.category.replaceAll('_', ' ')}</div>
                 </div>
-                <div style={{ color: '#cbd5e1' }}>{entry.windowTitle}</div>
-                <div style={{ color: '#94a3b8', fontSize: 13 }}>{entry.workerName} | {entry.deviceName}</div>
+                <div style={{ color: '#355372' }}>{entry.windowTitle}</div>
+                <div style={{ color: '#5f7288', fontSize: 13 }}>{entry.workerName} | {entry.deviceName}</div>
                 <div style={{ color: '#64748b', fontSize: 13 }}>{formatTimestamp(entry.at)}</div>
               </div>
             ))}
@@ -797,15 +827,15 @@ export default function DashboardPage() {
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0 }}>Client/site registry</h2>
           <ul style={{ paddingLeft: 18 }}>
             {state.sites.length === 0 ? <li>No active sites configured.</li> : null}
             {state.sites.map((site) => (
               <li key={site.id} style={{ marginBottom: 14 }}>
                 <strong>{site.name}</strong> | {site.clientName ?? 'No client name'}
-                <div style={{ color: '#94a3b8' }}>{site.addressLabel || 'Address not set yet'}</div>
-                <div style={{ color: '#94a3b8' }}>
+                <div style={{ color: '#5f7288' }}>{site.addressLabel || 'Address not set yet'}</div>
+                <div style={{ color: '#5f7288' }}>
                   {site.latitude.toFixed(5)}, {site.longitude.toFixed(5)} | radius {site.radius}m | {site.timezone ?? 'America/Aruba'}
                 </div>
               </li>
@@ -815,7 +845,7 @@ export default function DashboardPage() {
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 16 }}>
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0 }}>Active field shifts</h2>
           <ul style={{ paddingLeft: 18 }}>
             {state.activeShifts.length === 0 ? <li>No active shifts yet.</li> : null}
@@ -827,7 +857,7 @@ export default function DashboardPage() {
           </ul>
         </div>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.92)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.12)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <h2 style={{ marginTop: 0 }}>Recent field events</h2>
           <ul style={{ paddingLeft: 18 }}>
             {state.recentEvents.length === 0 ? <li>No geofence events yet.</li> : null}

@@ -36,13 +36,26 @@ export async function POST(request: Request) {
     return jsonError(error?.message ?? 'Unable to create employee.', 400);
   }
 
-  const { error: profileError } = await admin.serviceClient.from('profiles').upsert({
+  const profilePayload = {
     id: data.user.id,
     email,
     full_name: fullName,
     role: 'worker',
     is_active: true
-  });
+  };
+
+  let { error: profileError } = await admin.serviceClient.from('profiles').upsert(profilePayload as never);
+
+  if (profileError?.message?.includes('full_name')) {
+    const fallbackPayload = {
+      id: data.user.id,
+      email,
+      role: 'worker',
+      is_active: true
+    };
+
+    ({ error: profileError } = await admin.serviceClient.from('profiles').upsert(fallbackPayload as never));
+  }
 
   if (profileError) {
     return jsonError(profileError.message, 400);
