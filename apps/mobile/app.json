@@ -12,7 +12,7 @@
     "splash": {
       "image": "./assets/xeems-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#08121e"
+      "backgroundColor": "#f4f8fb"
     },
     "ios": {
       "supportsTablet": true,
@@ -28,7 +28,7 @@
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/xeems-icon.png",
-        "backgroundColor": "#08121e"
+        "backgroundColor": "#ffffff"
       }
     },
     "extra": {
