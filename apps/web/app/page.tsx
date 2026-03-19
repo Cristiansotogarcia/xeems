@@ -137,18 +137,20 @@ function getProfileLabel(profile: { full_name?: string | null; email?: string | 
 }
 
 const REFRESH_INTERVAL_MS = 30000;
+const defaultDesktopDownloadUrl = 'https://github.com/Cristiansotogarcia/xeems/releases/download/v1.0.0/XEEMS-1.0.0.exe';
+const defaultAndroidDownloadUrl = 'https://expo.dev/accounts/cristiansotogarcia/projects/fieldops-gps/builds/9f70ff86-9d78-4955-ad57-2031e9473888';
 
 const downloadTargets = [
   {
     name: 'Windows desktop',
     description: 'Managed XEEMS installer (.exe) for company laptops.',
-    url: process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? '/api/downloads/desktop',
+    url: process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? defaultDesktopDownloadUrl,
     cta: 'Download desktop app'
   },
   {
     name: 'Android phone',
     description: 'Internal Android build for company-issued field devices.',
-    url: process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL ?? '',
+    url: process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL ?? defaultAndroidDownloadUrl,
     cta: 'Download Android app'
   },
   {
