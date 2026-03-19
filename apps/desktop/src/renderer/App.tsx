@@ -139,6 +139,10 @@ const App: React.FC = () => {
           XEEMS stays active on company-owned laptops after enrollment. Employees receive written notification; they do not control the
           monitoring lifecycle from this app.
         </p>
+        <div className="notice hero__notice">
+          <strong>Admin access lives in the XEEMS web portal.</strong>
+          <span>This desktop app is only for employee laptop enrollment and background monitoring.</span>
+        </div>
       </header>
 
       {!status.signedIn || status.requiresLogin ? (

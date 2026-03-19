@@ -153,7 +153,7 @@ function LandingPage() {
       <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 28 }}>
         <section style={{ textAlign: 'center', display: 'grid', gap: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(360px, 78vw)', height: 'auto', filter: 'drop-shadow(0 24px 60px rgba(37,99,235,0.24))' }} />
+            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(520px, 86vw)', height: 'auto', filter: 'drop-shadow(0 24px 60px rgba(37,99,235,0.24))' }} />
           </div>
           <div>
             <div style={{ color: '#f59e0b', fontSize: 13, letterSpacing: '0.28em', textTransform: 'uppercase', marginBottom: 12 }}>XEEMS Control Plane</div>
@@ -169,8 +169,9 @@ function LandingPage() {
           <div style={{ padding: 28, borderRadius: 24, background: 'rgba(15, 23, 42, 0.84)', border: '1px solid rgba(249,115,22,0.24)' }}>
             <h2 style={{ marginTop: 0 }}>Admin Dashboard</h2>
             <p style={{ color: '#cbd5e1', lineHeight: 1.7 }}>
-              Create employee accounts, reset passwords, disable users, and manage desktop devices from one place.
+              Admins sign in here, create employee accounts, reset passwords, disable users, and manage desktop devices from one place.
             </p>
+            <div style={{ color: '#93c5fd', fontSize: 14, lineHeight: 1.7 }}>If you run `npm run dev` from the repo root, this web portal is the page you should use first.</div>
             <button
               onClick={() => router.push('/login')}
               style={{ marginTop: 18, padding: '14px 18px', borderRadius: 14, border: 0, background: '#f97316', color: '#111827', fontWeight: 700, cursor: 'pointer' }}

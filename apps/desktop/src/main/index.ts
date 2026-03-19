@@ -117,13 +117,14 @@ function applyManagedState(): void {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 920,
-    height: 680,
+    width: 980,
+    height: 760,
     minWidth: 520,
     minHeight: 580,
     show: false,
+    autoHideMenuBar: true,
     icon: resolveAssetPath('XEEMS_ICON.png'),
-    title: 'XEEMS Desktop Agent',
+    title: 'XEEMS',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -138,6 +139,9 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  mainWindow.removeMenu();
+  mainWindow.setMenuBarVisibility(false);
 
   mainWindow.once('ready-to-show', () => {
     if (!startHidden) {
@@ -264,6 +268,8 @@ if (!singleInstanceLock) {
     if (process.platform === 'win32') {
       app.setAppUserModelId('com.xa-tech.xeems-desktop');
     }
+
+    Menu.setApplicationMenu(null);
 
     if (process.platform === 'win32' && !isDev) {
       app.setLoginItemSettings({
