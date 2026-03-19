@@ -138,7 +138,7 @@ function getProfileLabel(profile: { full_name?: string | null; email?: string | 
 
 const REFRESH_INTERVAL_MS = 30000;
 const defaultDesktopDownloadUrl = 'https://github.com/Cristiansotogarcia/xeems/releases/download/v1.0.0/XEEMS-1.0.0.exe';
-const defaultAndroidDownloadUrl = 'https://expo.dev/accounts/cristiansotogarcia/projects/fieldops-gps/builds/9f70ff86-9d78-4955-ad57-2031e9473888';
+const defaultAndroidDownloadUrl = 'https://expo.dev/artifacts/eas/kFW8kcMSM1a7RzZ6f8kgzb.apk';
 
 const downloadTargets = [
   {
@@ -173,52 +173,48 @@ function LandingPage() {
         padding: '48px 20px'
       }}
     >
-      <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 28 }}>
-        <section style={{ textAlign: 'center', display: 'grid', gap: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(620px, 90vw)', height: 'auto', filter: 'drop-shadow(0 26px 50px rgba(16,35,61,0.12))' }} />
-          </div>
-          <div>
-            <div style={{ color: '#f59e0b', fontSize: 13, letterSpacing: '0.28em', textTransform: 'uppercase', marginBottom: 12 }}>XEEMS Control Plane</div>
-            <h1 style={{ margin: 0, fontSize: 58, lineHeight: 1, letterSpacing: '-0.04em', color: '#10233d' }}>Company-owned device monitoring</h1>
-          </div>
-          <p style={{ color: '#4b5f75', fontSize: 18, maxWidth: 720, margin: '0 auto', lineHeight: 1.7 }}>
-            XEEMS provisions employee accounts from the admin dashboard, enrolls Windows laptops once, and keeps the desktop agent running
-            on company-owned devices. Mobile remains the field shift and GPS companion.
+      <div style={{ maxWidth: 1120, margin: '0 auto', display: 'grid', gap: 30 }}>
+        <header className="landing-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 18 }}>
+          <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 'min(260px, 72vw)', height: 'auto' }} />
+          <button
+            className="landing-admin-button"
+            onClick={() => router.push('/login')}
+            style={{ padding: '14px 20px', borderRadius: 999, border: 0, background: '#10233d', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 16px 34px rgba(16,35,61,0.16)' }}
+          >
+            Admin login
+          </button>
+        </header>
+
+        <section style={{ display: 'grid', gap: 18, textAlign: 'center', padding: '14px 0 10px' }}>
+          <div style={{ color: '#f59e0b', fontSize: 13, letterSpacing: '0.22em', textTransform: 'uppercase' }}>XA Tech&apos;s Employee Efficiency Monitoring System</div>
+          <h1 style={{ margin: 0, fontSize: 58, lineHeight: 0.98, letterSpacing: '-0.05em', color: '#10233d' }}>One portal for admin access and company-device installs</h1>
+          <p style={{ color: '#4b5f75', fontSize: 18, maxWidth: 760, margin: '0 auto', lineHeight: 1.7 }}>
+            XEEMS gives administrators one place to manage employee accounts, watch live operations, and distribute the desktop and mobile apps used on company devices.
           </p>
         </section>
 
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-          <div style={{ padding: 28, borderRadius: 28, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(249,115,22,0.22)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-            <h2 style={{ marginTop: 0, color: '#10233d' }}>Admin Dashboard</h2>
-            <p style={{ color: '#4b5f75', lineHeight: 1.7 }}>
-              Admins sign in here, create employee accounts, reset passwords, disable users, and manage desktop devices from one place.
-            </p>
-            <div style={{ color: '#355372', fontSize: 14, lineHeight: 1.7 }}>If you run `npm run dev` from the repo root, this web portal is the page you should use first.</div>
-            <button
-              onClick={() => router.push('/login')}
-              style={{ marginTop: 18, padding: '14px 18px', borderRadius: 14, border: 0, background: '#f97316', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
-            >
-              Open admin login
-            </button>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
+          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Admin portal</div>
+            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Live oversight</h2>
+            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Create employee accounts, manage enrolled laptops, and review live field and desktop activity.</p>
           </div>
-
-          <div style={{ padding: 28, borderRadius: 28, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(29,98,209,0.2)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
-            <h2 style={{ marginTop: 0, color: '#10233d' }}>Deployment posture</h2>
-            <ul style={{ color: '#4b5f75', paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
-              <li>Windows desktop agent persists after first login.</li>
-              <li>Employees cannot stop monitoring from the app UI.</li>
-              <li>Written XEEMS notification replaces in-app consent capture.</li>
-            </ul>
+          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Desktop</div>
+            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Managed laptop agent</h2>
+            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Employees sign in once on the company laptop and XEEMS keeps the desktop agent running after enrollment.</p>
+          </div>
+          <div style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(16,35,61,0.08)', boxShadow: '0 24px 60px rgba(16,35,61,0.08)' }}>
+            <div style={{ color: '#355372', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Mobile</div>
+            <h2 style={{ marginTop: 0, marginBottom: 10, color: '#10233d' }}>Shift and GPS workflow</h2>
+            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Employees start and end shifts, lunch breaks, and pauses from the company phone while GPS stays tied to active work time.</p>
           </div>
         </section>
 
-        <section style={{ display: 'grid', gap: 18 }}>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <h2 style={{ margin: 0, color: '#10233d' }}>Employee app downloads</h2>
-            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>
-              Employees use this portal to install XEEMS on company devices. Publish the Windows installer and mobile install links, then set the public download URLs in the web environment.
-            </p>
+        <section style={{ display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gap: 8, textAlign: 'center' }}>
+            <h2 style={{ margin: 0, color: '#10233d' }}>Download XEEMS apps</h2>
+            <p style={{ color: '#4b5f75', margin: 0, lineHeight: 1.7 }}>Use the links below to install the employee apps on company devices.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
             {downloadTargets.map((target) => (
@@ -251,10 +247,19 @@ function LandingPage() {
               </div>
             ))}
           </div>
-          <div style={{ padding: 20, borderRadius: 22, background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(148,163,184,0.18)', color: '#4b5f75', lineHeight: 1.7, boxShadow: '0 20px 40px rgba(16,35,61,0.06)' }}>
-            Deployment note: the Windows card should point to the XEEMS installer `.exe`, while the Android and iPhone cards should point to the phone install links you publish for employees.
-          </div>
         </section>
+        <style jsx>{`
+          @media (max-width: 720px) {
+            .landing-header {
+              flex-direction: column-reverse;
+              align-items: stretch;
+            }
+
+            .landing-admin-button {
+              width: 100%;
+            }
+          }
+        `}</style>
       </div>
     </main>
   );
@@ -638,15 +643,12 @@ export default function DashboardPage() {
       }}
     >
       <section style={{ display: 'grid', gap: 10 }}>
-        <div style={{ color: '#f59e0b', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>XEEMS Admin</div>
+        <div style={{ color: '#f59e0b', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>XA Tech&apos;s Employee Efficiency Monitoring System</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'start', flexWrap: 'wrap' }}>
           <div style={{ display: 'grid', gap: 10, maxWidth: 860 }}>
-            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 320, maxWidth: '72vw', height: 'auto' }} />
-            <h1 style={{ margin: 0, fontSize: 42, letterSpacing: '-0.04em', color: '#10233d' }}>Managed device operations</h1>
-            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>
-              Company-owned XEEMS devices run under written notification, not user-driven consent. Admins provision employee accounts,
-              issue credentials, and remotely disable laptops when monitoring should stop.
-            </p>
+            <img src="/xeems-logo.png" alt="XEEMS" style={{ width: 380, maxWidth: '82vw', height: 'auto' }} />
+            <h1 style={{ margin: 0, fontSize: 42, letterSpacing: '-0.04em', color: '#10233d' }}>Admin operations dashboard</h1>
+            <p style={{ margin: 0, color: '#5f7288', lineHeight: 1.7 }}>Monitor live activity, manage employees, and control company devices from one place.</p>
             <div style={{ color: '#355372' }}>Signed in as: {state.adminName || '...'}</div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -658,9 +660,6 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-        <div style={{ borderRadius: 18, padding: 16, background: 'rgba(249, 115, 22, 0.09)', border: '1px solid rgba(249,115,22,0.18)', color: '#9a3412' }}>
-          Employees should receive written XEEMS notification outside the app. Desktop laptops are managed endpoints and the desktop agent should remain active after enrollment.
-        </div>
         {state.lastIssuedPassword ? (
           <div style={{ borderRadius: 18, padding: 16, background: 'rgba(29, 98, 209, 0.08)', border: '1px solid rgba(29,98,209,0.18)', color: '#183857' }}>
             Latest temporary password: <strong>{state.lastIssuedPassword}</strong>
@@ -669,7 +668,7 @@ export default function DashboardPage() {
         {state.error ? <div style={{ color: '#fca5a5' }}>{state.error}</div> : null}
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
         {stats.map(([label, value]) => (
           <div key={label} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 20, padding: 18, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
             <div style={{ color: '#5f7288', fontSize: 13 }}>{label}</div>
@@ -678,13 +677,11 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 16 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <form onSubmit={handleCreateEmployee} style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 14, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
           <div>
             <h2 style={{ marginTop: 0, marginBottom: 6 }}>Provision employee account</h2>
-            <p style={{ margin: 0, color: '#5f7288' }}>
-              Create a worker account, issue a temporary password, and let the user enroll the laptop once.
-            </p>
+            <p style={{ margin: 0, color: '#5f7288' }}>Create a worker account and issue the first sign-in password.</p>
           </div>
           <input
             value={form.fullName}
@@ -710,13 +707,10 @@ export default function DashboardPage() {
         </form>
 
         <div style={{ background: 'rgba(255,255,255,0.94)', borderRadius: 24, padding: 22, display: 'grid', gap: 12, border: '1px solid rgba(148,163,184,0.18)', boxShadow: '0 18px 36px rgba(16,35,61,0.06)' }}>
-          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Desktop rollout checklist</h2>
+          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Operations summary</h2>
           <div style={{ color: '#355372', lineHeight: 1.8 }}>
-            <div>1. Create employee account here.</div>
-            <div>2. Give the temporary password to the employee.</div>
-            <div>3. Employee signs into XEEMS Desktop once.</div>
-            <div>4. XEEMS enrolls the company laptop and resumes automatically after restart.</div>
-            <div>5. Use device controls below to disable monitoring remotely when needed.</div>
+            <div>Employee accounts, field shifts, desktop devices, and live activity are managed from this dashboard.</div>
+            <div>Use the tables below to reset passwords, disable accounts, and control enrolled laptops remotely.</div>
           </div>
         </div>
       </section>
