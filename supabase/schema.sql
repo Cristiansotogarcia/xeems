@@ -51,7 +51,14 @@ create table if not exists public.profiles (
 
 -- Add is_active column if it doesn't exist (for existing databases)
 alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists full_name text;
 alter table public.profiles add column if not exists is_active boolean not null default true;
+
+update public.profiles
+set full_name = coalesce(nullif(trim(full_name), ''), nullif(split_part(email, '@', 1), ''), 'User')
+where full_name is null or trim(full_name) = '';
+
+alter table public.profiles alter column full_name set not null;
 create unique index if not exists profiles_email_unique_idx on public.profiles (lower(email)) where email is not null;
 
 -- Define the is_admin function BEFORE any tables that depend on it
