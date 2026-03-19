@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "XEEMS",
-    "slug": "xeems-mobile",
+    "slug": "fieldops-gps",
     "scheme": "xeems",
     "jsEngine": "jsc",
     "icon": "./assets/xeems-icon.png",
@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "XEEMS uses your location on this company-issued phone while your shift is active and under written company notification.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "XEEMS can continue collecting location in the background only while your shift is active on this company-issued phone.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": ["location"],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
